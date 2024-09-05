@@ -9,5 +9,6 @@
     "resolveJsonModule": true
   },
   "include": [".", ".eslintrc.cjs"],
-  "exclude": ["lib"]
+  "exclude": ["lib"],
+  
 }
