@@ -3,15 +3,21 @@
 pragma solidity ^0.8.23;
 
 import "account-abstraction/core/BaseAccount.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "hardhat/console.sol";
 
 contract EmailAccount is BaseAccount {
     address public owner;
     IEntryPoint private immutable _entryPoint;
+    bytes32 public dkimPubkeyHash;
+    bytes32 public accountCommitment;
+    IGroth16Verifier public immutable verifier;
 
-    constructor(IEntryPoint anEntryPoint, address anOwner) {
+    constructor(IEntryPoint anEntryPoint, address anOwner, IGroth16Verifier _verifier, bytes32 _dkimPubkeyHash, bytes32 _accountCommitment) {
         _entryPoint = anEntryPoint;
-        owner = anOwner;
+        owner = anOwner;    
+        verifier = _verifier;
+        dkimPubkeyHash = _dkimPubkeyHash;
+        accountCommitment = _accountCommitment;
     }
 
     function entryPoint() public view override returns (IEntryPoint) {
@@ -19,8 +25,22 @@ contract EmailAccount is BaseAccount {
     }
 
     function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
-    internal override returns (uint256 validationData) {
-        return 0; // SIG_VALIDATION_SUCCESS
+    internal view override returns (uint256 validationData) {
+        
+        (bytes memory proof, uint256[3] memory publicInputs) = abi.decode(userOp.signature, (bytes, uint256[3]));
+        
+        require(publicInputs[0] != uint256(userOpHash), "Invalid userOpHash");
+        return 0;
+        require(publicInputs[1] == uint256(dkimPubkeyHash), "Invalid DKIM public key hash");
+        require(publicInputs[2] == uint256(accountCommitment), "Invalid account commitment");
+
+        bool isValid = verifier.verifyProof(proof, publicInputs);
+        
+        if (isValid) {
+            return 0; // SIG_VALIDATION_SUCCESS
+        } else {
+            return 1; // SIG_VALIDATION_FAILED
+        }
     }
 
     function execute(address dest, uint256 value, bytes calldata func) external {
@@ -38,4 +58,8 @@ contract EmailAccount is BaseAccount {
 
     // Fallback function is called when msg.data is not empty
     fallback() external payable {}
+}
+
+interface IGroth16Verifier {
+    function verifyProof(bytes memory proof, uint256[3] memory publicInputs) external view returns (bool);
 }
