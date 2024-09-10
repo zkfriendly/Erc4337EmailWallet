@@ -3,44 +3,56 @@
 pragma solidity ^0.8.23;
 
 import "account-abstraction/core/BaseAccount.sol";
-import "hardhat/console.sol";
 
 contract EmailAccount is BaseAccount {
     address public owner;
     IEntryPoint private immutable _entryPoint;
-    bytes32 public dkimPubkeyHash;
-    bytes32 public accountCommitment;
+    uint256 public dkimPubkeyHash;
+    uint256 public accountCommitment;
     IGroth16Verifier public immutable verifier;
 
     constructor(IEntryPoint anEntryPoint, address anOwner, IGroth16Verifier _verifier, bytes32 _dkimPubkeyHash, bytes32 _accountCommitment) {
         _entryPoint = anEntryPoint;
         owner = anOwner;    
         verifier = _verifier;
-        dkimPubkeyHash = _dkimPubkeyHash;
-        accountCommitment = _accountCommitment;
+        dkimPubkeyHash = uint256(_dkimPubkeyHash);
+        accountCommitment = uint256(_accountCommitment);
     }
 
     function entryPoint() public view override returns (IEntryPoint) {
         return _entryPoint;
     }
 
+    event Log(uint256 data);
+    function uintToString(uint256 _value) internal pure returns (string memory) {
+        if (_value == 0) {
+            return "0";
+        }
+        uint256 temp = _value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 10;
+        }
+        bytes memory buffer = new bytes(digits);
+        while (_value != 0) {
+            digits -= 1;
+            buffer[digits] = bytes1(uint8(48 + uint256(_value % 10)));
+            _value /= 10;
+        }
+        return string(buffer);
+    }
+
     function _validateSignature(PackedUserOperation calldata userOp, bytes32 userOpHash)
     internal view override returns (uint256 validationData) {
-        
         (bytes memory proof, uint256[3] memory publicInputs) = abi.decode(userOp.signature, (bytes, uint256[3]));
-        
-        require(publicInputs[0] != uint256(userOpHash), "Invalid userOpHash");
-        return 0;
-        require(publicInputs[1] == uint256(dkimPubkeyHash), "Invalid DKIM public key hash");
-        require(publicInputs[2] == uint256(accountCommitment), "Invalid account commitment");
-
-        bool isValid = verifier.verifyProof(proof, publicInputs);
-        
-        if (isValid) {
-            return 0; // SIG_VALIDATION_SUCCESS
-        } else {
-            return 1; // SIG_VALIDATION_FAILED
-        }
+        // optimizing this to return early if any of the checks fail causes gas estimation to be off by a lot in the bundler
+        bool isUserOpHashValid = publicInputs[0] == uint256(userOpHash);
+        bool isDkimPubkeyHashValid = publicInputs[1] == dkimPubkeyHash;
+        bool isAccountCommitmentValid = publicInputs[2] == accountCommitment;
+        bool isProofValid = verifier.verifyProof(proof, publicInputs);
+        bool result = isUserOpHashValid && isDkimPubkeyHashValid && isAccountCommitmentValid && isProofValid;
+        return result ? 0 : 1;
     }
 
     function execute(address dest, uint256 value, bytes calldata func) external {

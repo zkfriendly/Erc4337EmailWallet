@@ -9,7 +9,7 @@ import { setupTests } from "./utils/setupTests";
 import {
   createUserOperation,
 } from "./utils/createUserOp";
-import { packUserOp } from "./utils/userOpUtils";
+import { packUserOp, getUserOpHash } from "./utils/userOpUtils";
 import { getSigners } from "./utils/getSigners";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 
@@ -79,13 +79,29 @@ describe("EmailAccountTest", () => {
 
     // Sample proof data (replace with actual proof data in a real scenario)
     const sampleProof = ethers.hexlify(ethers.randomBytes(32));
-    
-    // Public inputs: [userOpHash, dkimPubkeyHash, accountCommitment]
-    const userOpHash = ethers.keccak256(ethers.toUtf8Bytes("sample_user_op_hash"));
+    const dummySignature = ethers.AbiCoder.defaultAbiCoder().encode(
+      ["bytes", "uint256[3]"],
+      [sampleProof, [0,0,0]]
+    );
+    const unsignedUserOperation = await createUserOperation(
+      provider,
+      bundlerProvider,
+      emailAccountAddress,
+      { factory: "0x", factoryData: "0x" },
+      callData,
+      entryPointAddress,
+      dummySignature // Temporary placeholder for signature
+    );
+
+    // Calculate userOpHash
+    const chainId = await provider.getNetwork().then(network => network.chainId);
+    const userOpHash = getUserOpHash(unsignedUserOperation, entryPointAddress, Number(chainId));
+    console.log("UserOpHash:", userOpHash);
+      
     const publicInputs = [
-      userOpHash,
-      SAMPLE_DKIM_PUBKEY_HASH,
-      SAMPLE_ACCOUNT_COMMITMENT
+      BigInt(userOpHash),
+      BigInt(SAMPLE_DKIM_PUBKEY_HASH),
+      BigInt(SAMPLE_ACCOUNT_COMMITMENT)
     ];
 
     // ABI encode the proof and public inputs
@@ -94,15 +110,8 @@ describe("EmailAccountTest", () => {
       [sampleProof, publicInputs]
     );
 
-    const unsignedUserOperation = await createUserOperation(
-      provider,
-      bundlerProvider,
-      emailAccountAddress,
-      { factory: "0x", factoryData: "0x" },
-      callData,
-      entryPointAddress,
-      signature,
-    );
+    // Update the userOperation with the calculated signature
+    unsignedUserOperation.signature = signature;
     
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
     console.log("Recipient balance before:", ethers.formatEther(recipientBalanceBefore), "ETH");
