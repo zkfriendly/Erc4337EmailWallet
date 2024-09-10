@@ -50,7 +50,6 @@ describe("EmailAccountTest", () => {
       EmailAccount__factory,
       [
         entryPointAddress,
-        ownerAddress,
         mockVerifierAddress,
         SAMPLE_DKIM_PUBKEY_HASH,
         SAMPLE_ACCOUNT_COMMITMENT
