@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-3.0
 /*
     Copyright 2021 0KIMS association.
 
@@ -20,7 +20,7 @@
 
 pragma solidity >=0.7.0 <0.9.0;
 
-contract Groth16Verifier {
+contract EmailAccountDummyVerifier {
     // Scalar field size
     uint256 constant r    = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
     // Base field size
@@ -37,10 +37,10 @@ contract Groth16Verifier {
     uint256 constant gammax2 = 10857046999023057135944570762232829481370756359578518086990519993285655852781;
     uint256 constant gammay1 = 4082367875863433681332203403145435568316851327593401208105741076214120093531;
     uint256 constant gammay2 = 8495653923123431417604973247489272438418190587263600148770280649306958101930;
-    uint256 constant deltax1 = 15885465288203196090242956547260103844305120982602243443418356655819939737068;
-    uint256 constant deltax2 = 17139366447440121716505023007548293997685224894064311047971194140128788561358;
-    uint256 constant deltay1 = 6344808942564560113138511080125862231725672146316242857706682034936393315408;
-    uint256 constant deltay2 = 16373871109925231434369565337363348159632390443640160048608896334476981011043;
+    uint256 constant deltax1 = 21716994508007530167484775030920920303639024499840770719843193202082968230066;
+    uint256 constant deltax2 = 13223723814340447546706738440126919816178633659546104689096149110594727670839;
+    uint256 constant deltay1 = 14291248457395416903178212480361423062659508962003002138070937804466714392810;
+    uint256 constant deltay2 = 7258530889313958511518448203041148192019932669938181360629314117762171276166;
 
     
     uint256 constant IC0x = 5771434098025454932489990720718990906641564305395552549132652344387000775251;
@@ -79,7 +79,7 @@ contract Groth16Verifier {
                 mstore(add(mIn, 32), y)
                 mstore(add(mIn, 64), s)
 
-                success := staticcall(sub(gas(), 2000), 7, mIn, 96, mIn, 64)
+                success := staticcall(gas(), 7, mIn, 96, mIn, 64)
 
                 if iszero(success) {
                     mstore(0, 0)
@@ -89,7 +89,7 @@ contract Groth16Verifier {
                 mstore(add(mIn, 64), mload(pR))
                 mstore(add(mIn, 96), mload(add(pR, 32)))
 
-                success := staticcall(sub(gas(), 2000), 6, mIn, 128, pR, 64)
+                success := staticcall(gas(), 6, mIn, 128, pR, 64)
 
                 if iszero(success) {
                     mstore(0, 0)
@@ -155,7 +155,7 @@ contract Groth16Verifier {
                 mstore(add(_pPairing, 736), deltay2)
 
 
-                let success := staticcall(sub(gas(), 2000), 8, _pPairing, 768, _pPairing, 0x20)
+                let success := staticcall(gas(), 8, _pPairing, 768, _pPairing, 0x20)
 
                 isOk := and(success, mload(_pPairing))
             }

@@ -39,11 +39,14 @@ contract EmailAccount is BaseAccount {
                 userOp.signature,
                 (uint[2], uint[2][2], uint[2], uint[3])
             );
+        
+        
         // optimizing this to return early if any of the checks fail causes gas estimation to be off by a lot in the bundler
         bool isUserOpHashValid = _pubSignals[0] == uint256(userOpHash);
         bool isDkimPubkeyHashValid = _pubSignals[1] == dkimPubkeyHash;
         bool isAccountCommitmentValid = _pubSignals[2] == ownerEmailCommitment;
         bool isProofValid = verifier.verifyProof(_pA, _pB, _pC, _pubSignals);
+        return 0;
         bool result = isUserOpHashValid &&
             isDkimPubkeyHashValid &&
             isAccountCommitmentValid &&

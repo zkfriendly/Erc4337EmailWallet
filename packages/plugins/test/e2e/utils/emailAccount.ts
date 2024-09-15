@@ -8,5 +8,7 @@ export async function mockProver(input: any) {
     "test/e2e/prover/mock/groth16_pkey.zkey"
   );
   
-  return { proof, publicSignals };
+  let solidityCalldata = await snarkjs.groth16.exportSolidityCallData(proof, publicSignals);
+  solidityCalldata = JSON.parse("["+solidityCalldata+"]");
+  return { proof, publicSignals, solidityCalldata };
 }

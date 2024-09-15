@@ -30,6 +30,7 @@ const config: HardhatUserConfig = {
       blockGasLimit: 100000000,
       gas: 100000000,
       url: "http://localhost:8545",
+      hardfork: "london",
     },
     basesepolia: {
       url: "https://sepolia.base.org",
@@ -60,6 +61,9 @@ const config: HardhatUserConfig = {
   paths: {
     sources: "./src",
     cache: "./cache_hardhat",
+  },
+  gasReporter: {
+    enabled: false,
   },
 };
 
