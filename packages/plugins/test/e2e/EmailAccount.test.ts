@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import {
   EntryPoint__factory,
   EmailAccount__factory,
-  EmailGroth16Verifier__factory
+  AlwaysValidVerifier__factory
 } from "../../typechain-types";
 import { setupTests } from "./utils/setupTests";
 import {
@@ -51,7 +51,7 @@ describe("EmailAccountTest", () => {
 
     // Deploy MockGroth16Verifier
     console.log("Deploying MockGroth16Verifier...");
-    const mockVerifier = await deployer.connectOrDeploy(EmailGroth16Verifier__factory, []);
+    const mockVerifier = await deployer.connectOrDeploy(AlwaysValidVerifier__factory, []);
     const mockVerifierAddress = await mockVerifier.getAddress();
     console.log("MockGroth16Verifier deployed at:", mockVerifierAddress);
 

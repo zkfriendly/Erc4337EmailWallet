@@ -4,7 +4,7 @@ pragma abicoder v2;
 
 import {IGroth16Verifier} from "../interfaces/IGroth16Verifier.sol";
 
-contract EmailGroth16Verifier is IGroth16Verifier {
+contract AlwaysValidVerifier is IGroth16Verifier {
     function verifyProof(
         uint[2] calldata _pA,
         uint[2][2] calldata _pB,
