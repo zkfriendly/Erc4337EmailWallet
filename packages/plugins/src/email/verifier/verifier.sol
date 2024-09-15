@@ -6,9 +6,12 @@ import {IGroth16Verifier} from "../interfaces/IGroth16Verifier.sol";
 
 contract EmailGroth16Verifier is IGroth16Verifier {
     function verifyProof(
-        bytes calldata proof,
-        uint256[3] memory publicSignals
+        uint[2] calldata _pA,
+        uint[2][2] calldata _pB,
+        uint[2] calldata _pC,
+        uint[3] calldata _pubSignals
     ) external view returns (bool r) {
+        // For now, we'll keep the dummy implementation
         return true;
     }
 }
