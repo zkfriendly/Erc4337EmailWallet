@@ -13,25 +13,24 @@ import { packUserOp, getUserOpHash } from "./utils/userOpUtils";
 import { getSigners } from "./utils/getSigners";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
 import * as snarkjs from 'snarkjs';
-
+import { mockProver } from "./utils/emailAccount";
 
 describe("EmailAccountTest", () => {
-  it("should load the circuit prover", async () => {
-    const dummyInput = {
+  it("should load the mock prover", async () => {
+    const input = {
       userOpHashIn: "0x0",
       emailCommitmentIn: "0x1",
       pubkeyHashIn: "0x2"
     }
-    // Load the circuit
-    const { proof, publicSignals } = await snarkjs.groth16.fullProve(
-      dummyInput,
-      "test/e2e/prover/mock/main.wasm",
-      "test/e2e/prover/mock/groth16_pkey.zkey"
-    );
-
-    console.log("Proof generated:", proof);
-    console.log("Public signals:", publicSignals);
+    
+    const { proof, publicSignals } = await mockProver(input);
+    
+    // Add assertions if needed, public signals are  same as inputs but in array
+    expect(proof).to.exist;
+    expect(publicSignals).to.exist;
+    expect(publicSignals).to.deep.equal(Object.values(input));
   })
+  
   // it("should execute a simple ETH transfer", async () => {
   //   console.log("Starting EmailAccountTest...");
   //   const {
