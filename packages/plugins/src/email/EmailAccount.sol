@@ -10,6 +10,8 @@ contract EmailAccount is BaseAccount {
     uint256 public ownerEmailCommitment; // hash of the owner's salted email
     IGroth16Verifier public immutable verifier; // the zk verifier for email integrity and ownership
 
+    uint256 public constant p = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+
     constructor(
         IEntryPoint anEntryPoint,
         IGroth16Verifier _verifier,
@@ -18,8 +20,8 @@ contract EmailAccount is BaseAccount {
     ) {
         _entryPoint = anEntryPoint;
         verifier = _verifier;
-        dkimPubkeyHash = uint256(_dkimPubkeyHash);
-        ownerEmailCommitment = uint256(_accountCommitment);
+        dkimPubkeyHash = uint256(_dkimPubkeyHash) % p;
+        ownerEmailCommitment = uint256(_accountCommitment) % p;
     }
 
     function entryPoint() public view override returns (IEntryPoint) {
@@ -40,13 +42,11 @@ contract EmailAccount is BaseAccount {
                 (uint[2], uint[2][2], uint[2], uint[3])
             );
         
-        
         // optimizing this to return early if any of the checks fail causes gas estimation to be off by a lot in the bundler
-        bool isUserOpHashValid = _pubSignals[0] == uint256(userOpHash);
-        bool isDkimPubkeyHashValid = _pubSignals[1] == dkimPubkeyHash;
-        bool isAccountCommitmentValid = _pubSignals[2] == ownerEmailCommitment;
+        bool isUserOpHashValid = _pubSignals[0] == uint256(userOpHash) % p;
+        bool isAccountCommitmentValid = _pubSignals[1] == ownerEmailCommitment;
+        bool isDkimPubkeyHashValid = _pubSignals[2] == dkimPubkeyHash;
         bool isProofValid = verifier.verifyProof(_pA, _pB, _pC, _pubSignals);
-        return 0;
         bool result = isUserOpHashValid &&
             isDkimPubkeyHashValid &&
             isAccountCommitmentValid &&

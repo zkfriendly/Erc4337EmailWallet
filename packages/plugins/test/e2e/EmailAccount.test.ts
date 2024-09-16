@@ -64,10 +64,10 @@ describe("EmailAccountTest", () => {
     console.log("MockGroth16Verifier deployed at:", mockVerifierAddress);
 
     // Sample values for DKIM public key hash and account commitment
-    const SAMPLE_DKIM_PUBKEY_HASH = ethers.keccak256(
+    let SAMPLE_DKIM_PUBKEY_HASH = ethers.keccak256(
       ethers.toUtf8Bytes("sample_dkim_pubkey")
     );
-    const SAMPLE_ACCOUNT_COMMITMENT = ethers.keccak256(
+    let SAMPLE_ACCOUNT_COMMITMENT = ethers.keccak256(
       ethers.toUtf8Bytes("sample_account_commitment")
     );
     console.log("DKIM public key hash:", SAMPLE_DKIM_PUBKEY_HASH);
@@ -138,12 +138,21 @@ describe("EmailAccountTest", () => {
     const chainId = await provider
       .getNetwork()
       .then((network) => network.chainId);
-    const userOpHash = getUserOpHash(
+    let userOpHash = (getUserOpHash(
       unsignedUserOperation,
       entryPointAddress,
       Number(chainId)
-    );
-    console.log("UserOpHash:", userOpHash);
+    ));
+   
+    let p = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+
+    // userOpHash = (BigInt(userOpHash)% p).toString(16);
+    // SAMPLE_ACCOUNT_COMMITMENT = (BigInt(SAMPLE_ACCOUNT_COMMITMENT)% p).toString(16);
+    // SAMPLE_DKIM_PUBKEY_HASH = (BigInt(SAMPLE_DKIM_PUBKEY_HASH)% p).toString(16);
+    
+    console.log("UserOpHash:", (BigInt(userOpHash) % p).toString(16));
+    console.log("accountCommitment", (BigInt(SAMPLE_ACCOUNT_COMMITMENT) % p).toString(16));
+    console.log("dkimPubkeyHash", (BigInt(SAMPLE_DKIM_PUBKEY_HASH) % p).toString(16));
 
     const publicInputs = {
       userOpHashIn: userOpHash,
@@ -153,8 +162,7 @@ describe("EmailAccountTest", () => {
 
     const { proof, publicSignals, solidityCalldata } = await mockProver(publicInputs);
 
-    console.log("Proof:", proof);
-    console.log("Public signals:", publicSignals);
+    console.log("calldata", solidityCalldata[3]);
 
     // ABI encode the proof and public inputs
     const signature = ethers.AbiCoder.defaultAbiCoder().encode(
@@ -163,12 +171,14 @@ describe("EmailAccountTest", () => {
         solidityCalldata[0],
         solidityCalldata[1],
         solidityCalldata[2],
-        publicSignals,
+        solidityCalldata[3],
       ]
     );
 
     // Update the userOperation with the calculated signature
     unsignedUserOperation.signature = signature;
+
+    
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
     console.log(
