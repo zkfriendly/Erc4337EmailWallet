@@ -112,17 +112,11 @@ describe("EmailAccountTest", () => {
 
     const {
       proof: _,
-      publicSignals: dummyPublicSignals,
       solidityCalldata: dummySolidityCalldata,
     } = await mockProver(dummyInput);
     const dummySignature = ethers.AbiCoder.defaultAbiCoder().encode(
       ["uint256[2]", "uint256[2][2]", "uint256[2]", "uint256[3]"],
-      [
-        dummySolidityCalldata[0],
-        dummySolidityCalldata[1],
-        dummySolidityCalldata[2],
-        dummyPublicSignals,
-      ]
+      dummySolidityCalldata as any
     );
     const unsignedUserOperation = await createUserOperation(
       provider,
@@ -146,14 +140,6 @@ describe("EmailAccountTest", () => {
    
     let p = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
-    // userOpHash = (BigInt(userOpHash)% p).toString(16);
-    // SAMPLE_ACCOUNT_COMMITMENT = (BigInt(SAMPLE_ACCOUNT_COMMITMENT)% p).toString(16);
-    // SAMPLE_DKIM_PUBKEY_HASH = (BigInt(SAMPLE_DKIM_PUBKEY_HASH)% p).toString(16);
-    
-    console.log("UserOpHash:", (BigInt(userOpHash) % p).toString(16));
-    console.log("accountCommitment", (BigInt(SAMPLE_ACCOUNT_COMMITMENT) % p).toString(16));
-    console.log("dkimPubkeyHash", (BigInt(SAMPLE_DKIM_PUBKEY_HASH) % p).toString(16));
-
     const publicInputs = {
       userOpHashIn: userOpHash,
       emailCommitmentIn: SAMPLE_ACCOUNT_COMMITMENT,
@@ -167,18 +153,11 @@ describe("EmailAccountTest", () => {
     // ABI encode the proof and public inputs
     const signature = ethers.AbiCoder.defaultAbiCoder().encode(
       ["uint256[2]", "uint256[2][2]", "uint256[2]", "uint256[3]"],
-      [
-        solidityCalldata[0],
-        solidityCalldata[1],
-        solidityCalldata[2],
-        solidityCalldata[3],
-      ]
+      solidityCalldata as any
     );
 
     // Update the userOperation with the calculated signature
     unsignedUserOperation.signature = signature;
-
-    
 
     const recipientBalanceBefore = await provider.getBalance(recipientAddress);
     console.log(
