@@ -33,8 +33,10 @@ describe("EmailAccountTest", () => {
     let emailAccount: EmailAccount;
     let owner: Signer;
     let recipient: Signer;
-    let domainPubKeyHash: string;
-    let accountCommitment: string;
+    let domainPubKeyHash: bigint;
+    let accountCommitment: bigint;
+
+    const p = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
     beforeEach(async () => {
         context = await setupTests();
@@ -42,14 +44,14 @@ describe("EmailAccountTest", () => {
         verifier = await context.deployer.connectOrDeploy(EmailAccountDummyVerifier__factory, []);
         dkimRegistry = await context.deployer.connectOrDeploy(HMockDkimRegistry__factory, []);
 
-        domainPubKeyHash = ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey"));
-        accountCommitment = ethers.keccak256(ethers.toUtf8Bytes("sample_account_commitment"));
+        domainPubKeyHash = BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey"))) % BigInt(p);
+        accountCommitment = BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_account_commitment"))) % BigInt(p);
 
         emailAccount = await context.deployer.connectOrDeploy(EmailAccount__factory, [
             context.entryPointAddress,
             await verifier.getAddress(),
             await dkimRegistry.getAddress(),
-            accountCommitment,
+            accountCommitment.toString(),
         ]);
 
         // Fund the EmailAccount
@@ -84,6 +86,12 @@ describe("EmailAccountTest", () => {
         expect(publicSignals).to.deep.equal(Object.values(input));
     });
 
+    it("should validate domain pubkey hash", async () => {
+        await emailAccount.updateHashValidity(domainPubKeyHash);
+        const isValid = await emailAccount.isHashValid(domainPubKeyHash);
+        expect(isValid).to.be.true;
+    });
+
     it("should execute a simple ETH transfer", async () => {
         const recipientAddress = await recipient.getAddress();
         const transferAmount = ethers.parseEther("1");
@@ -100,8 +108,8 @@ describe("EmailAccountTest", () => {
         // used for gas estimation simulation
         const dummySignature = await eSign({
             userOpHashIn: "0x0",
-            emailCommitmentIn: accountCommitment,
-            pubkeyHashIn: domainPubKeyHash,
+            emailCommitmentIn: accountCommitment.toString(),
+            pubkeyHashIn: domainPubKeyHash.toString(),
         });
 
         const unsignedUserOperation = await createUserOperation(
@@ -118,15 +126,13 @@ describe("EmailAccountTest", () => {
         const chainId = await context.provider.getNetwork().then(network => network.chainId);
         let userOpHash = getUserOpHash(unsignedUserOperation, context.entryPointAddress, Number(chainId));
 
-        const publicInputs = {
-            userOpHashIn: userOpHash,
-            emailCommitmentIn: accountCommitment,
-            pubkeyHashIn: domainPubKeyHash,
-        };
-
         // Update the userOperation with the calculated signature
         let signedUserOperation = unsignedUserOperation;
-        signedUserOperation.signature = await eSign(publicInputs);
+        signedUserOperation.signature = await eSign({
+            userOpHashIn: userOpHash,
+            emailCommitmentIn: accountCommitment.toString(),
+            pubkeyHashIn: domainPubKeyHash.toString(),
+        });
         return signedUserOperation;
     }
 });

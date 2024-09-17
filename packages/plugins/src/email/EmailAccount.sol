@@ -31,12 +31,12 @@ contract EmailAccount is BaseAccount {
         IEntryPoint anEntryPoint,
         IGroth16Verifier _verifier,
         address _dkimRegistry,
-        bytes32 _accountCommitment
+        uint256 _accountCommitment
     ) {
         _entryPoint = anEntryPoint;
         verifier = _verifier;
         dkimRegistry = _dkimRegistry;
-        ownerEmailCommitment = uint256(_accountCommitment) % p;
+        ownerEmailCommitment = _accountCommitment % p;
     }
 
     function entryPoint() public view override returns (IEntryPoint) {
@@ -63,7 +63,7 @@ contract EmailAccount is BaseAccount {
         return result ? 0 : 1;
     }
 
-    modifier onlyValidDKIMHash() {
+    modifier onlyValidDkimHash() {
         // fetch the latest state from the dkim registry
         bool isValid = IDkimRegistry(dkimRegistry).isDKIMPublicKeyHashValid(currentHash);
 
@@ -80,7 +80,7 @@ contract EmailAccount is BaseAccount {
         _;
     }
 
-    function execute(address dest, uint256 value, bytes calldata func) external onlyValidDKIMHash {
+    function execute(address dest, uint256 value, bytes calldata func) external onlyValidDkimHash {
         _requireFromEntryPoint();
         (bool success, bytes memory result) = dest.call{ value: value }(func);
 
