@@ -33,6 +33,7 @@ describe("EmailAccountTest", () => {
     let emailAccount: EmailAccount;
     let owner: Signer;
     let recipient: Signer;
+    let recipientAddress: string;
     let domainPubKeyHash: bigint;
     let accountCommitment: bigint;
 
@@ -41,6 +42,7 @@ describe("EmailAccountTest", () => {
     beforeEach(async () => {
         context = await setupTests();
         [owner, recipient] = getSigners();
+        recipientAddress = await recipient.getAddress();
         verifier = await context.deployer.connectOrDeploy(EmailAccountDummyVerifier__factory, []);
         dkimRegistry = await context.deployer.connectOrDeploy(HMockDkimRegistry__factory, []);
 
@@ -87,22 +89,20 @@ describe("EmailAccountTest", () => {
     });
 
     it("should execute a simple ETH transfer", async () => {
-        const recipientAddress = await recipient.getAddress();
         const transferAmount = ethers.parseEther("1");
         await emailAccount.updateHashValidity(domainPubKeyHash);
-        await assertSendEth(recipientAddress, transferAmount);
+        await assertSendEth(transferAmount);
     });
 
     it("should send 2 more eth", async () => {
-        await assertSendEth(await recipient.getAddress(), ethers.parseEther("2"));
+        await assertSendEth(ethers.parseEther("2"));
     });
 
     it("should not be able to reuse the same signature on similar userOps", async () => {
-        const recipientAddress = await recipient.getAddress();
         const transferAmount = ethers.parseEther("1");
 
         const callData = emailAccount.interface.encodeFunctionData("execute", [recipientAddress, transferAmount, "0x"]);
-        const userOp1 = await prepareUserOp(recipientAddress, callData);
+        const userOp1 = await prepareUserOp(callData);
         const userOp2 = await createUserOperation(
             context.provider,
             context.bundlerProvider,
@@ -117,7 +117,39 @@ describe("EmailAccountTest", () => {
         expect(sendUserOpAndWait(userOp2, context.entryPointAddress, context.bundlerProvider)).to.be.rejected;
     });
 
-    async function prepareUserOp(recipientAddress: string, callData: string) {
+    it("should send eth with a different valid domain pubkey hash", async () => {
+        const transferAmount = ethers.parseEther("1");
+        domainPubKeyHash = BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_2"))) % BigInt(p); // will reset on each test case
+        await emailAccount.updateHashValidity(domainPubKeyHash);
+        await assertSendEth(transferAmount);
+    });
+
+    it("should be able to still use the old valid domain pubkey hash", async () => {
+        const transferAmount = ethers.parseEther("1");
+        await emailAccount.updateHashValidity(domainPubKeyHash);
+        await assertSendEth(transferAmount);
+    });
+
+    it("should fail to transfer on first tx after new valid domain pubkey hash", async () => {
+        const transferAmount = ethers.parseEther("1");
+        domainPubKeyHash = BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) % BigInt(p);
+        await expect(assertSendEth(transferAmount)).to.be.rejected;
+    });
+
+    it("should not fail to transfer on second tx after new valid domain pubkey hash", async () => {
+        const transferAmount = ethers.parseEther("1");
+        domainPubKeyHash = BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) % BigInt(p);
+        await assertSendEth(transferAmount);
+    });
+
+    it("should fail with invalid domain pubkey hash", async () => {
+        const transferAmount = ethers.parseEther("1");
+        domainPubKeyHash = BigInt(5); // means that the domain pubkey hash is invalid
+        await expect(assertSendEth(transferAmount)).to.be.rejected; // todo: rejects because it's first tx after new domain pubkey hash
+        await expect(assertSendEth(transferAmount)).to.be.rejected; // todo: rejects because it has invalid domain pubkey hash
+    });
+
+    async function prepareUserOp(callData: string) {
         // used for gas estimation simulation
         const dummySignature = await eSign({
             userOpHashIn: "0x0",
@@ -149,10 +181,10 @@ describe("EmailAccountTest", () => {
         return signedUserOperation;
     }
 
-    async function assertSendEth(recipientAddress: string, amount: bigint) {
+    async function assertSendEth(amount: bigint) {
         const recipientBalanceBefore = await context.provider.getBalance(recipientAddress);
         const callData = emailAccount.interface.encodeFunctionData("execute", [recipientAddress, amount, "0x"]);
-        const userOp = await prepareUserOp(recipientAddress, callData);
+        const userOp = await prepareUserOp(callData);
         await sendUserOpAndWait(userOp, context.entryPointAddress, context.bundlerProvider);
         const recipientBalanceAfter = await context.provider.getBalance(recipientAddress);
         const expectedRecipientBalance = recipientBalanceBefore + amount;
