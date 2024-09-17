@@ -1,202 +1,132 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
-  EntryPoint__factory,
-  EmailAccount__factory,
-  EmailAccountDummyVerifier__factory,
-  EmailAccountDummyVerifier,
+    EmailAccount__factory,
+    EmailAccountDummyVerifier__factory,
+    EmailAccountDummyVerifier,
+    HMockDkimRegistry,
+    HMockDkimRegistry__factory,
+    EmailAccount,
 } from "../../typechain-types";
 import { setupTests } from "./utils/setupTests";
 import { createUserOperation } from "./utils/createUserOp";
-import { packUserOp, getUserOpHash } from "./utils/userOpUtils";
+import { getUserOpHash } from "./utils/userOpUtils";
 import { getSigners } from "./utils/getSigners";
 import sendUserOpAndWait from "./utils/sendUserOpAndWait";
-import * as snarkjs from "snarkjs";
-import { mockProver } from "./utils/emailAccount";
+import { eSign, mockProver } from "./utils/emailAccount";
+import { JsonRpcProvider, NonceManager, Signer } from "ethers";
+import DeterministicDeployer from "../../lib-ts/deterministic-deployer/DeterministicDeployer";
 
 describe("EmailAccountTest", () => {
-  it("should load the mock prover", async () => {
-    const input = {
-      userOpHashIn: "0x0",
-      emailCommitmentIn: "0x1",
-      pubkeyHashIn: "0x2",
+    let context: {
+        bundlerProvider: JsonRpcProvider;
+        provider: JsonRpcProvider;
+        admin: NonceManager;
+        owner: NonceManager;
+        otherAccount: NonceManager;
+        entryPointAddress: string;
+        deployer: DeterministicDeployer;
     };
 
-    const { proof, publicSignals, solidityCalldata } = await mockProver(input);
+    let verifier: EmailAccountDummyVerifier;
+    let dkimRegistry: HMockDkimRegistry;
+    let emailAccount: EmailAccount;
+    let owner: Signer;
+    let recipient: Signer;
+    let domainPubKeyHash: string;
+    let accountCommitment: string;
 
-    const factory = await ethers.getContractFactory(
-      "EmailAccountDummyVerifier"
-    );
-    const verifier = await factory.deploy();
+    beforeEach(async () => {
+        context = await setupTests();
+        [owner, recipient] = getSigners();
+        verifier = await context.deployer.connectOrDeploy(EmailAccountDummyVerifier__factory, []);
+        dkimRegistry = await context.deployer.connectOrDeploy(HMockDkimRegistry__factory, []);
 
-    const result = await verifier.verifyProof(
-      solidityCalldata[0],
-      solidityCalldata[1],
-      solidityCalldata[2],
-      publicSignals
-    );
+        domainPubKeyHash = ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey"));
+        accountCommitment = ethers.keccak256(ethers.toUtf8Bytes("sample_account_commitment"));
 
-    expect(result).to.be.true;
-    expect(proof).to.exist;
-    expect(publicSignals).to.exist;
-    expect(publicSignals).to.deep.equal(Object.values(input));
-  });
+        emailAccount = await context.deployer.connectOrDeploy(EmailAccount__factory, [
+            context.entryPointAddress,
+            await verifier.getAddress(),
+            await dkimRegistry.getAddress(),
+            accountCommitment,
+        ]);
 
-  it("should execute a simple ETH transfer", async () => {
-    console.log("Starting EmailAccountTest...");
-    const { bundlerProvider, provider, admin, entryPointAddress, deployer } =
-      await setupTests();
-    console.log("Test setup completed.");
-
-    const [owner, recipient] = getSigners();
-    const recipientAddress = await recipient.getAddress();
-    const ownerAddress = await owner.getAddress();
-    console.log("Recipient address:", recipientAddress);
-    console.log("Owner address:", ownerAddress);
-
-    // Deploy MockGroth16Verifier
-    console.log("Deploying MockGroth16Verifier...");
-    const mockVerifier = await deployer.connectOrDeploy(
-      EmailAccountDummyVerifier__factory,
-      []
-    );
-    const mockVerifierAddress = await mockVerifier.getAddress();
-    console.log("MockGroth16Verifier deployed at:", mockVerifierAddress);
-
-    // Sample values for DKIM public key hash and account commitment
-    let SAMPLE_DKIM_PUBKEY_HASH = ethers.keccak256(
-      ethers.toUtf8Bytes("sample_dkim_pubkey")
-    );
-    let SAMPLE_ACCOUNT_COMMITMENT = ethers.keccak256(
-      ethers.toUtf8Bytes("sample_account_commitment")
-    );
-    console.log("DKIM public key hash:", SAMPLE_DKIM_PUBKEY_HASH);
-    console.log("Account commitment:", SAMPLE_ACCOUNT_COMMITMENT);
-
-    // Deploy EmailAccount
-    console.log("Deploying EmailAccount...");
-    const emailAccount = await deployer.connectOrDeploy(EmailAccount__factory, [
-      entryPointAddress,
-      mockVerifierAddress,
-      SAMPLE_DKIM_PUBKEY_HASH,
-      SAMPLE_ACCOUNT_COMMITMENT,
-    ]);
-    const emailAccountAddress = await emailAccount.getAddress();
-    console.log("EmailAccount deployed at:", emailAccountAddress);
-
-    // Fund the EmailAccount
-    console.log("Funding EmailAccount...");
-    await admin.sendTransaction({
-      to: emailAccountAddress,
-      value: ethers.parseEther("20"),
+        // Fund the EmailAccount
+        await context.admin.sendTransaction({
+            to: await emailAccount.getAddress(),
+            value: ethers.parseEther("20"),
+        });
     });
-    console.log("EmailAccount funded with 20 ETH");
 
-    const transferAmount = ethers.parseEther("1");
-    console.log("Transfer amount:", ethers.formatEther(transferAmount), "ETH");
+    it("should load the mock prover", async () => {
+        const input = {
+            userOpHashIn: "0x0",
+            emailCommitmentIn: "0x1",
+            pubkeyHashIn: "0x2",
+        };
 
-    // Prepare calldata for a simple ETH transfer
-    const callData = emailAccount.interface.encodeFunctionData("execute", [
-      recipientAddress,
-      transferAmount,
-      "0x",
-    ]);
-    console.log("Calldata prepared:", callData);
+        const { proof, publicSignals, solidityCalldata } = await mockProver(input);
 
-    // Sample proof data (replace with actual proof data in a real scenario)
-    const dummyInput = {
-      userOpHashIn: "0x0",
-      emailCommitmentIn: "0x1",
-      pubkeyHashIn: "0x2",
-    };
+        const factory = await ethers.getContractFactory("EmailAccountDummyVerifier");
+        const verifier = await factory.deploy();
 
-    const {
-      proof: _,
-      solidityCalldata: dummySolidityCalldata,
-    } = await mockProver(dummyInput);
-    const dummySignature = ethers.AbiCoder.defaultAbiCoder().encode(
-      ["uint256[2]", "uint256[2][2]", "uint256[2]", "uint256[3]"],
-      dummySolidityCalldata as any
-    );
-    const unsignedUserOperation = await createUserOperation(
-      provider,
-      bundlerProvider,
-      emailAccountAddress,
-      { factory: "0x", factoryData: "0x" },
-      callData,
-      entryPointAddress,
-      dummySignature // Temporary placeholder for signature
-    );
+        const result = await verifier.verifyProof(
+            solidityCalldata[0],
+            solidityCalldata[1],
+            solidityCalldata[2],
+            publicSignals
+        );
 
-    // Calculate userOpHash
-    const chainId = await provider
-      .getNetwork()
-      .then((network) => network.chainId);
-    let userOpHash = (getUserOpHash(
-      unsignedUserOperation,
-      entryPointAddress,
-      Number(chainId)
-    ));
-   
-    let p = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+        expect(result).to.be.true;
+        expect(proof).to.exist;
+        expect(publicSignals).to.exist;
+        expect(publicSignals).to.deep.equal(Object.values(input));
+    });
 
-    const publicInputs = {
-      userOpHashIn: userOpHash,
-      emailCommitmentIn: SAMPLE_ACCOUNT_COMMITMENT,
-      pubkeyHashIn: SAMPLE_DKIM_PUBKEY_HASH,
-    };
+    it("should execute a simple ETH transfer", async () => {
+        const recipientAddress = await recipient.getAddress();
+        const transferAmount = ethers.parseEther("1");
+        const recipientBalanceBefore = await context.provider.getBalance(recipientAddress);
+        const callData = emailAccount.interface.encodeFunctionData("execute", [recipientAddress, transferAmount, "0x"]);
+        const userOp = await prepareUserOp(recipientAddress, callData);
+        await sendUserOpAndWait(userOp, context.entryPointAddress, context.bundlerProvider);
+        const recipientBalanceAfter = await context.provider.getBalance(recipientAddress);
+        const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
+        expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
+    });
 
-    const { proof, publicSignals, solidityCalldata } = await mockProver(publicInputs);
+    async function prepareUserOp(recipientAddress: string, callData: string) {
+        // used for gas estimation simulation
+        const dummySignature = await eSign({
+            userOpHashIn: "0x0",
+            emailCommitmentIn: accountCommitment,
+            pubkeyHashIn: domainPubKeyHash,
+        });
 
-    console.log("calldata", solidityCalldata[3]);
+        const unsignedUserOperation = await createUserOperation(
+            context.provider,
+            context.bundlerProvider,
+            await emailAccount.getAddress(),
+            { factory: "0x", factoryData: "0x" },
+            callData,
+            context.entryPointAddress,
+            dummySignature // Temporary placeholder for signature
+        );
 
-    // ABI encode the proof and public inputs
-    const signature = ethers.AbiCoder.defaultAbiCoder().encode(
-      ["uint256[2]", "uint256[2][2]", "uint256[2]", "uint256[3]"],
-      solidityCalldata as any
-    );
+        // Calculate userOpHash
+        const chainId = await context.provider.getNetwork().then(network => network.chainId);
+        let userOpHash = getUserOpHash(unsignedUserOperation, context.entryPointAddress, Number(chainId));
 
-    // Update the userOperation with the calculated signature
-    unsignedUserOperation.signature = signature;
+        const publicInputs = {
+            userOpHashIn: userOpHash,
+            emailCommitmentIn: accountCommitment,
+            pubkeyHashIn: domainPubKeyHash,
+        };
 
-    const recipientBalanceBefore = await provider.getBalance(recipientAddress);
-    console.log(
-      "Recipient balance before:",
-      ethers.formatEther(recipientBalanceBefore),
-      "ETH"
-    );
-
-    console.log(
-      "Unsigned UserOperation:",
-      JSON.stringify(unsignedUserOperation, null, 2)
-    );
-
-    // Send userOp
-    console.log("Sending UserOperation...");
-
-    const receipt = await sendUserOpAndWait(
-      unsignedUserOperation,
-      entryPointAddress,
-      bundlerProvider,
-      10000
-    );
-    console.log("UserOperation sent. Transaction hash:", receipt.success);
-
-    const recipientBalanceAfter = await provider.getBalance(recipientAddress);
-    console.log(
-      "Recipient balance after:",
-      ethers.formatEther(recipientBalanceAfter),
-      "ETH"
-    );
-
-    const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
-    console.log(
-      "Expected recipient balance:",
-      ethers.formatEther(expectedRecipientBalance),
-      "ETH"
-    );
-
-    expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
-    console.log("Test completed successfully.");
-  });
+        // Update the userOperation with the calculated signature
+        let signedUserOperation = unsignedUserOperation;
+        signedUserOperation.signature = await eSign(publicInputs);
+        return signedUserOperation;
+    }
 });
