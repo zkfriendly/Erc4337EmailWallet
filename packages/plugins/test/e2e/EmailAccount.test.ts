@@ -86,22 +86,35 @@ describe("EmailAccountTest", () => {
         expect(publicSignals).to.deep.equal(Object.values(input));
     });
 
-    it("should validate domain pubkey hash", async () => {
-        await emailAccount.updateHashValidity(domainPubKeyHash);
-        const isValid = await emailAccount.isHashValid(domainPubKeyHash);
-        expect(isValid).to.be.true;
-    });
-
     it("should execute a simple ETH transfer", async () => {
         const recipientAddress = await recipient.getAddress();
         const transferAmount = ethers.parseEther("1");
-        const recipientBalanceBefore = await context.provider.getBalance(recipientAddress);
+        await emailAccount.updateHashValidity(domainPubKeyHash);
+        await assertSendEth(recipientAddress, transferAmount);
+    });
+
+    it("should send 2 more eth", async () => {
+        await assertSendEth(await recipient.getAddress(), ethers.parseEther("2"));
+    });
+
+    it("should not be able to reuse the same signature on similar userOps", async () => {
+        const recipientAddress = await recipient.getAddress();
+        const transferAmount = ethers.parseEther("1");
+
         const callData = emailAccount.interface.encodeFunctionData("execute", [recipientAddress, transferAmount, "0x"]);
-        const userOp = await prepareUserOp(recipientAddress, callData);
-        await sendUserOpAndWait(userOp, context.entryPointAddress, context.bundlerProvider);
-        const recipientBalanceAfter = await context.provider.getBalance(recipientAddress);
-        const expectedRecipientBalance = recipientBalanceBefore + transferAmount;
-        expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
+        const userOp1 = await prepareUserOp(recipientAddress, callData);
+        const userOp2 = await createUserOperation(
+            context.provider,
+            context.bundlerProvider,
+            await emailAccount.getAddress(),
+            { factory: "0x", factoryData: "0x" },
+            callData,
+            context.entryPointAddress,
+            userOp1.signature
+        );
+
+        await sendUserOpAndWait(userOp1, context.entryPointAddress, context.bundlerProvider);
+        expect(sendUserOpAndWait(userOp2, context.entryPointAddress, context.bundlerProvider)).to.be.rejected;
     });
 
     async function prepareUserOp(recipientAddress: string, callData: string) {
@@ -134,5 +147,15 @@ describe("EmailAccountTest", () => {
             pubkeyHashIn: domainPubKeyHash.toString(),
         });
         return signedUserOperation;
+    }
+
+    async function assertSendEth(recipientAddress: string, amount: bigint) {
+        const recipientBalanceBefore = await context.provider.getBalance(recipientAddress);
+        const callData = emailAccount.interface.encodeFunctionData("execute", [recipientAddress, amount, "0x"]);
+        const userOp = await prepareUserOp(recipientAddress, callData);
+        await sendUserOpAndWait(userOp, context.entryPointAddress, context.bundlerProvider);
+        const recipientBalanceAfter = await context.provider.getBalance(recipientAddress);
+        const expectedRecipientBalance = recipientBalanceBefore + amount;
+        expect(recipientBalanceAfter).to.equal(expectedRecipientBalance);
     }
 });
