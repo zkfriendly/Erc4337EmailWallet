@@ -38,6 +38,7 @@ describe("EmailAccountTest", () => {
     let accountCommitment: bigint;
 
     const p = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+    const transferAmount = ethers.parseEther("1");
 
     beforeEach(async () => {
         context = await setupTests();
@@ -89,18 +90,15 @@ describe("EmailAccountTest", () => {
     });
 
     it("should execute a simple ETH transfer", async () => {
-        const transferAmount = ethers.parseEther("1");
-        await emailAccount.updateHashValidity(domainPubKeyHash);
         await assertSendEth(transferAmount);
     });
 
-    it("should send 2 more eth", async () => {
+    it("should send 2 more eth twice", async () => {
+        await assertSendEth(ethers.parseEther("2"));
         await assertSendEth(ethers.parseEther("2"));
     });
 
     it("should not be able to reuse the same signature on similar userOps", async () => {
-        const transferAmount = ethers.parseEther("1");
-
         const callData = emailAccount.interface.encodeFunctionData("execute", [recipientAddress, transferAmount, "0x"]);
         const userOp1 = await prepareUserOp(callData);
         const userOp2 = await createUserOperation(
@@ -118,35 +116,32 @@ describe("EmailAccountTest", () => {
     });
 
     it("should send eth with a different valid domain pubkey hash", async () => {
-        const transferAmount = ethers.parseEther("1");
         domainPubKeyHash = BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_2"))) % BigInt(p); // will reset on each test case
-        await emailAccount.updateHashValidity(domainPubKeyHash);
         await assertSendEth(transferAmount);
     });
 
     it("should be able to still use the old valid domain pubkey hash", async () => {
-        const transferAmount = ethers.parseEther("1");
-        await emailAccount.updateHashValidity(domainPubKeyHash);
         await assertSendEth(transferAmount);
     });
 
-    it("should fail to transfer on first tx after new valid domain pubkey hash", async () => {
-        const transferAmount = ethers.parseEther("1");
+    it("should not fail to transfer on first tx after new valid domain pubkey hash", async () => {
         domainPubKeyHash = BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) % BigInt(p);
-        await expect(assertSendEth(transferAmount)).to.be.rejected;
+        await assertSendEth(transferAmount);
     });
 
     it("should not fail to transfer on second tx after new valid domain pubkey hash", async () => {
-        const transferAmount = ethers.parseEther("1");
         domainPubKeyHash = BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) % BigInt(p);
         await assertSendEth(transferAmount);
     });
 
     it("should fail with invalid domain pubkey hash", async () => {
-        const transferAmount = ethers.parseEther("1");
         domainPubKeyHash = BigInt(5); // means that the domain pubkey hash is invalid
-        await expect(assertSendEth(transferAmount)).to.be.rejected; // todo: rejects because it's first tx after new domain pubkey hash
         await expect(assertSendEth(transferAmount)).to.be.rejected; // todo: rejects because it has invalid domain pubkey hash
+    });
+
+    it("should fail with invalid account commitment", async () => {
+        accountCommitment = BigInt(5); // means that the account commitment is invalid
+        await expect(assertSendEth(transferAmount)).to.be.rejected;
     });
 
     async function prepareUserOp(callData: string) {

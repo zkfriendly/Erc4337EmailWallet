@@ -6,27 +6,29 @@ import "account-abstraction/core/BaseAccount.sol";
 import "./interfaces/IGroth16Verifier.sol";
 import "./interfaces/IDkimRegistry.sol";
 
+/// @title ERC-4337 EmailAccount
+/// @notice A contract for managing email-based accounts with DKIM verification
+/// @dev Implements BaseAccount for account abstraction
 contract EmailAccount is BaseAccount {
     IEntryPoint private immutable _entryPoint;
-    address public dkimRegistry; // address of the dkim registry to query validity of dkim public key hashesh
-    uint256 public ownerEmailCommitment; // hash of the owner's salted email
-    IGroth16Verifier public immutable verifier; // the zk verifier for email integrity and ownership
+    address public dkimRegistry; // Address of the DKIM registry to query validity of DKIM public key hashes
+    uint256 public ownerEmailCommitment; // Hash of the owner's salted email
+    IGroth16Verifier public immutable verifier; // The ZK verifier for email integrity and ownership
 
+    // BN128 field prime - used for reducing userOpHash to field size
     uint256 public constant p = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
-    /* is the hash(domain, pubkeyhash) valid
-     ** this can be updated either by calling updateHashValidity or on the
-     ** first userOp execution transaction after the hash is valid/invalid on dkimRegistry
-     */
-    mapping(uint256 => bool) public isHashValid;
-
-    /* the current hash(domain, pubkeyhash) being validated
-     ** this is coming from _validateSignature
-     */
+    /// @notice The current hash(domain, pubkeyhash) being validated
+    /// @dev This is set in _validateSignature
     uint256 public currentHash;
 
     error DKIMHashInvalid();
 
+    /// @notice Constructs the EmailAccount contract
+    /// @param anEntryPoint The EntryPoint contract address
+    /// @param _verifier The Groth16 verifier contract
+    /// @param _dkimRegistry The DKIM registry contract address
+    /// @param _accountCommitment The initial account commitment
     constructor(
         IEntryPoint anEntryPoint,
         IGroth16Verifier _verifier,
@@ -39,10 +41,16 @@ contract EmailAccount is BaseAccount {
         ownerEmailCommitment = _accountCommitment % p;
     }
 
+    /// @notice Returns the EntryPoint contract
+    /// @return The EntryPoint contract instance
     function entryPoint() public view override returns (IEntryPoint) {
         return _entryPoint;
     }
 
+    /// @notice Validates the signature of a user operation
+    /// @param userOp The user operation to validate
+    /// @param userOpHash The hash of the user operation
+    /// @return validationData 0 if valid, 1 if invalid
     function _validateSignature(
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
@@ -52,34 +60,31 @@ contract EmailAccount is BaseAccount {
             (uint[2], uint[2][2], uint[2], uint[3])
         );
 
-        // optimizing this to return early if any of the checks fail causes gas estimation to be off by a lot in the bundler
+        // Optimizing this to return early if any of the checks fail causes gas estimation to be off by a lot in the bundler
         bool isUserOpHashValid = _pubSignals[0] == uint256(userOpHash) % p;
         bool isAccountCommitmentValid = _pubSignals[1] == ownerEmailCommitment;
         bool isProofValid = verifier.verifyProof(_pA, _pB, _pC, _pubSignals);
         bool result = isUserOpHashValid && isAccountCommitmentValid && isProofValid;
 
-        currentHash = _pubSignals[2]; // store this for validation before executing the transaction
+        currentHash = _pubSignals[2]; // Store this for validation before executing the transaction
 
         return result ? 0 : 1;
     }
 
+    /// @notice Modifier to ensure the DKIM hash is valid before execution
     modifier onlyValidDkimHash() {
-        // fetch the latest state from the dkim registry
-        bool isValid = IDkimRegistry(dkimRegistry).isDKIMPublicKeyHashValid(currentHash);
-
-        // update the cache if the state has changed
-        if (isValid != isHashValid[currentHash]) {
-            isHashValid[currentHash] = isValid;
-            return; // we can't revert to allow they cache to be updated in the next transaction
-        }
-
-        // if the hash is invalid, revert
-        if (!isHashValid[currentHash]) {
+        // Fetch the latest state from the DKIM registry
+        if (!IDkimRegistry(dkimRegistry).isDKIMPublicKeyHashValid(currentHash)) {
+            currentHash = 0;
             revert DKIMHashInvalid();
         }
         _;
     }
 
+    /// @notice Executes a transaction
+    /// @param dest The destination address
+    /// @param value The amount of ETH to send
+    /// @param func The function data to execute
     function execute(address dest, uint256 value, bytes calldata func) external onlyValidDkimHash {
         _requireFromEntryPoint();
         (bool success, bytes memory result) = dest.call{ value: value }(func);
@@ -91,13 +96,9 @@ contract EmailAccount is BaseAccount {
         }
     }
 
-    function updateHashValidity(uint256 _hash) external {
-        isHashValid[_hash] = IDkimRegistry(dkimRegistry).isDKIMPublicKeyHashValid(_hash);
-    }
-
-    // Function to receive Ether. msg.data must be empty
+    /// @notice Receives Ether
     receive() external payable {}
 
-    // Fallback function is called when msg.data is not empty
+    /// @notice Fallback function
     fallback() external payable {}
 }
