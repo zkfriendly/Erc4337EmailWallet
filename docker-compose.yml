@@ -1,18 +1,16 @@
-version: "3.8"
-
 services:
   node:
     build:
-      context: ./node
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.node
     ports:
       - "8545:8545"
     command: ["anvil", "--host", "0.0.0.0"]
 
   bundler:
     build:
-      context: ./bundler
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: Dockerfile.bundler
     ports:
       - "3000:3000"
     command:
