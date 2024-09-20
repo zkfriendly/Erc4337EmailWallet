@@ -1,5 +1,5 @@
-import { ethers, ignition } from "hardhat";
-import { JsonRpcProvider, Signer, ethers as ethers2 } from "ethers";
+import { ethers } from "hardhat";
+import { JsonRpcProvider, Signer } from "ethers";
 import {
   EmailAccount,
   EmailAccountDummyVerifier,
@@ -11,27 +11,6 @@ import sendUserOpAndWait, {
   getUserOpHash,
 } from "./userOpUtils";
 import { expect } from "chai";
-
-// const EmailAccountModule = buildModule("EmailAccount", (m) => {
-//   const entryPointAddress = m.getParameter("entryPointAddress", "0x0");
-//   const verifierAddress = m.getParameter("verifierAddress", "0x0");
-//   const dkimRegistryAddress = m.getParameter("dkimRegistryAddress", "0x0");
-//   const accountCommitment = m.getParameter("accountCommitment", "0x0");
-
-//   console.log("entryPointAddress", entryPointAddress);
-//   console.log("verifierAddress", verifierAddress);
-//   console.log("dkimRegistryAddress", dkimRegistryAddress);
-//   console.log("accountCommitment", accountCommitment);
-
-//   const emailAccount = m.contract("EmailAccount", [
-//     entryPointAddress,
-//     verifierAddress,
-//     dkimRegistryAddress,
-//     accountCommitment,
-//   ]);
-
-//   return { emailAccount };
-// });
 
 describe("EmailAccountTest", () => {
   let context: {
@@ -83,20 +62,20 @@ describe("EmailAccountTest", () => {
     };
   }
 
-  async function deploy(factoryName: string, args: any[]) {
-    const factory = await ethers.getContractFactory(factoryName);
-    return await factory.deploy(...args);
-  }
-
-  beforeEach(async () => {
+  before(async () => {
     context = await setupTests();
     [owner, recipient] = await ethers.getSigners();
+
     recipientAddress = await recipient.getAddress();
-    verifier = (await deploy(
-      "EmailAccountDummyVerifier",
-      []
-    )) as EmailAccountDummyVerifier;
-    dkimRegistry = (await deploy("HMockDkimRegistry", [])) as HMockDkimRegistry;
+    const verifierFactory = await ethers.getContractFactory(
+      "EmailAccountDummyVerifier"
+    );
+    verifier = await verifierFactory.deploy();
+
+    const dkimRegistryFactory = await ethers.getContractFactory(
+      "HMockDkimRegistry"
+    );
+    dkimRegistry = await dkimRegistryFactory.deploy();
 
     domainPubKeyHash =
       BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey"))) %
@@ -113,18 +92,13 @@ describe("EmailAccountTest", () => {
       await dkimRegistry.getAddress(),
       accountCommitment
     );
+    await emailAccount.waitForDeployment();
 
-    // Fund the EmailAccount
-    await context.admin.sendTransaction({
-      to: await emailAccount.getAddress(),
-      value: ethers.parseEther("20"),
-    });
-
-    // make sure entrypoint is a contract
-  });
-
-  it("should just work", async () => {
-    expect(true).to.be.true;
+    // fund the account
+    await context.provider.send("hardhat_setBalance", [
+      await emailAccount.getAddress(),
+      ethers.parseEther("1000").toString(),
+    ]);
   });
 
   it("should load the mock prover", async () => {
@@ -158,76 +132,76 @@ describe("EmailAccountTest", () => {
     await assertSendEth(transferAmount);
   });
 
-  // it("should send 2 more eth twice", async () => {
-  //   await assertSendEth(ethers.parseEther("2"));
-  //   await assertSendEth(ethers.parseEther("2"));
-  // });
+  it("should send 2 more eth twice", async () => {
+    await assertSendEth(ethers.parseEther("2"));
+    await assertSendEth(ethers.parseEther("2"));
+  });
 
-  // it("should not be able to reuse the same signature on similar userOps", async () => {
-  //   const callData = emailAccount.interface.encodeFunctionData("execute", [
-  //     recipientAddress,
-  //     transferAmount,
-  //     "0x",
-  //   ]);
-  //   const userOp1 = await prepareUserOp(callData);
-  //   const userOp2 = await createUserOperation(
-  //     context.provider,
-  //     context.bundlerProvider,
-  //     await emailAccount.getAddress(),
-  //     { factory: "0x", factoryData: "0x" },
-  //     callData,
-  //     context.entryPointAddress,
-  //     userOp1.signature
-  //   );
+  it("should not be able to reuse the same signature on similar userOps", async () => {
+    const callData = emailAccount.interface.encodeFunctionData("execute", [
+      recipientAddress,
+      transferAmount,
+      "0x",
+    ]);
+    const userOp1 = await prepareUserOp(callData);
+    const userOp2 = await createUserOperation(
+      context.provider,
+      context.bundlerProvider,
+      await emailAccount.getAddress(),
+      { factory: "0x", factoryData: "0x" },
+      callData,
+      context.entryPointAddress,
+      userOp1.signature
+    );
 
-  //   await sendUserOpAndWait(
-  //     userOp1,
-  //     context.entryPointAddress,
-  //     context.bundlerProvider
-  //   );
-  //   expect(
-  //     sendUserOpAndWait(
-  //       userOp2,
-  //       context.entryPointAddress,
-  //       context.bundlerProvider
-  //     )
-  //   ).to.be.rejected;
-  // });
+    await sendUserOpAndWait(
+      userOp1,
+      context.entryPointAddress,
+      context.bundlerProvider
+    );
+    expect(
+      sendUserOpAndWait(
+        userOp2,
+        context.entryPointAddress,
+        context.bundlerProvider
+      )
+    ).to.be.rejected;
+  });
 
-  // it("should send eth with a different valid domain pubkey hash", async () => {
-  //   domainPubKeyHash =
-  //     BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_2"))) %
-  //     BigInt(p); // will reset on each test case
-  //   await assertSendEth(transferAmount);
-  // });
+  it("should send eth with a different valid domain pubkey hash", async () => {
+    domainPubKeyHash =
+      BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_2"))) %
+      BigInt(p); // will reset on each test case
+    await assertSendEth(transferAmount);
+  });
 
-  // it("should be able to still use the old valid domain pubkey hash", async () => {
-  //   await assertSendEth(transferAmount);
-  // });
+  it("should be able to still use the old valid domain pubkey hash", async () => {
+    await assertSendEth(transferAmount);
+  });
 
-  // it("should not fail to transfer on first tx after new valid domain pubkey hash", async () => {
-  //   domainPubKeyHash =
-  //     BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) %
-  //     BigInt(p);
-  //   await assertSendEth(transferAmount);
-  // });
+  it("should not fail to transfer on first tx after new valid domain pubkey hash", async () => {
+    domainPubKeyHash =
+      BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) %
+      BigInt(p);
+    await assertSendEth(transferAmount);
+  });
 
-  // it("should not fail to transfer on second tx after new valid domain pubkey hash", async () => {
-  //   domainPubKeyHash =
-  //     BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) %
-  //     BigInt(p);
-  //   await assertSendEth(transferAmount);
-  // });
+  it("should not fail to transfer on second tx after new valid domain pubkey hash", async () => {
+    domainPubKeyHash =
+      BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) %
+      BigInt(p);
+    await assertSendEth(transferAmount);
+  });
 
-  // it("should fail with invalid domain pubkey hash", async () => {
-  //   domainPubKeyHash = BigInt(5); // means that the domain pubkey hash is invalid
-  //   await expect(assertSendEth(transferAmount)).to.be.rejected; // todo: rejects because it has invalid domain pubkey hash
-  // });
+  it("should fail with invalid domain pubkey hash", async () => {
+    domainPubKeyHash = BigInt(5); // means that the domain pubkey hash is invalid
+    await expect(assertSendEth(transferAmount)).to.be.rejected; // todo: rejects because it has invalid domain pubkey hash
+  });
 
-  // it("should fail with invalid account commitment", async () => {
-  //   accountCommitment = BigInt(5); // means that the account commitment is invalid
-  //   await expect(assertSendEth(transferAmount)).to.be.rejected;
-  // });
+  it("should fail with invalid account commitment", async () => {
+    accountCommitment = BigInt(5); // means that the account commitment is invalid
+    await expect(assertSendEth(transferAmount)).to.be.rejected;
+  });
 
   async function prepareUserOp(callData: string) {
     // used for gas estimation simulation
