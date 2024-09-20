@@ -57,13 +57,13 @@ contract EmailAccount is BaseAccount {
         bytes32 userOpHash
     ) internal override returns (uint256 validationData) {
         (
-            uint[2] memory _pA,
-            uint[2][2] memory _pB,
-            uint[2] memory _pC,
-            uint[3] memory _pubSignals
+            uint256[2] memory _pA,
+            uint256[2][2] memory _pB,
+            uint256[2] memory _pC,
+            uint256[3] memory _pubSignals
         ) = abi.decode(
                 userOp.signature,
-                (uint[2], uint[2][2], uint[2], uint[3])
+                (uint256[2], uint256[2][2], uint256[2], uint256[3])
             );
 
         // Optimizing this to return early if any of the checks fail causes gas estimation to be off by a lot in the bundler

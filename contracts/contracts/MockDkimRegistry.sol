@@ -11,6 +11,4 @@ contract HMockDkimRegistry {
         }
         return true;
     }
-
-    receive() external payable {}
 }
