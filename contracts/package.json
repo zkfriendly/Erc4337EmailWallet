@@ -1,14 +1,26 @@
 {
   "name": "hardhat-project",
   "devDependencies": {
+    "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-ignition": "^0.15.5",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.0",
+    "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@nomicfoundation/ignition-core": "^0.15.5",
+    "@typechain/ethers-v5": "^11.1.2",
+    "@typechain/ethers-v6": "^0.5.0",
+    "@types/chai": "^4.2.0",
+    "chai": "^4.2.0",
     "ethers": "^6.13.2",
     "hardhat": "^2.22.11",
-    "ts-node": "^10.9.2"
+    "hardhat-gas-reporter": "^1.0.8",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.0"
   },
   "dependencies": {
-    "@account/abstraction": "https://github.com/eth-infinitism/account-abstraction",
+    "@account-abstraction": "https://github.com/eth-infinitism/account-abstraction",
     "@types/snarkjs": "^0.7.8",
     "snarkjs": "^0.7.4"
   }

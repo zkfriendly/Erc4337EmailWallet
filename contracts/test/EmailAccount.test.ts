@@ -11,7 +11,6 @@ import sendUserOpAndWait, {
   getUserOpHash,
 } from "./userOpUtils";
 import { expect } from "chai";
-import { EntryPoint__factory } from "../lib/account-abstraction/typechain";
 
 // const EmailAccountModule = buildModule("EmailAccount", (m) => {
 //   const entryPointAddress = m.getParameter("entryPointAddress", "0x0");
