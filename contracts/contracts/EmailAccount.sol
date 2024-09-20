@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.23;
 
-import "../lib/account-abstraction/contracts/core/BaseAccount.sol";
+import "@account/abstraction/contracts/core/BaseAccount.sol";
 import "./interfaces/IGroth16Verifier.sol";
 import "./interfaces/IDkimRegistry.sol";
 
