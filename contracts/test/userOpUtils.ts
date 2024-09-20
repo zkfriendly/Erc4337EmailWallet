@@ -7,9 +7,9 @@ import {
   isHexString,
   keccak256,
 } from "ethers";
-import { PackedUserOperationStruct } from "../typechain-types/contracts/EmailAccount";
+import { PackedUserOperationStruct } from "../typechain/contracts/EmailAccount";
 import { ethers } from "ethers";
-import { IEntryPoint__factory } from "../typechain-types";
+import { IEntryPoint__factory } from "../typechain";
 
 /**
  * @notice these utils have been largely copied from ERC4337Utils.ts in eth-infinitism's

@@ -4,7 +4,7 @@ import {
   EmailAccount,
   EmailAccountDummyVerifier,
   HMockDkimRegistry,
-} from "../typechain-types";
+} from "../typechain";
 import { eSign, mockProver } from "./utils";
 import sendUserOpAndWait, {
   createUserOperation,
