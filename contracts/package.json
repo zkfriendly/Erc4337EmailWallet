@@ -8,7 +8,6 @@
     "ts-node": "^10.9.2"
   },
   "dependencies": {
-    "@account-abstraction": "github:eth-infinitism/account-abstraction",
     "@types/snarkjs": "^0.7.8",
     "snarkjs": "^0.7.4"
   }

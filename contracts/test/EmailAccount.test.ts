@@ -70,13 +70,17 @@ describe("EmailAccountTest", () => {
       []
     );
 
+    if (entrypoints.length === 0) {
+      throw new Error("No entrypoints found");
+    }
+
     return {
       bundlerProvider,
       provider,
       admin,
       owner,
       recipient,
-      entryPointAddress: await entryPoint.getAddress(),
+      entryPointAddress: entrypoints[0],
     };
   }
 
