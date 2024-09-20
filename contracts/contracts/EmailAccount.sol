@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.23;
 
-import "../lib/account-abstraction/contracts/core/BaseAccount.sol";
+import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "./interfaces/IGroth16Verifier.sol";
 import "./interfaces/IDkimRegistry.sol";
 
@@ -10,10 +10,10 @@ import "./interfaces/IDkimRegistry.sol";
 /// @notice A contract for managing email-based accounts with DKIM verification
 /// @dev Implements BaseAccount for account abstraction
 contract EmailAccount is BaseAccount {
-    IEntryPoint private immutable _entryPoint;
+    address private immutable _entryPoint;
     address public dkimRegistry; // Address of the DKIM registry to query validity of DKIM public key hashes
     uint256 public ownerEmailCommitment; // Hash of the owner's salted email
-    IGroth16Verifier public immutable verifier; // The ZK verifier for email integrity and ownership
+    address public immutable verifier; // The ZK verifier for email integrity and ownership
 
     // BN128 field prime - used for reducing userOpHash to field size
     uint256 public constant p =
@@ -31,8 +31,8 @@ contract EmailAccount is BaseAccount {
     /// @param _dkimRegistry The DKIM registry contract address
     /// @param _accountCommitment The initial account commitment
     constructor(
-        IEntryPoint anEntryPoint,
-        IGroth16Verifier _verifier,
+        address anEntryPoint,
+        address _verifier,
         address _dkimRegistry,
         uint256 _accountCommitment
     ) {
@@ -45,7 +45,7 @@ contract EmailAccount is BaseAccount {
     /// @notice Returns the EntryPoint contract
     /// @return The EntryPoint contract instance
     function entryPoint() public view override returns (IEntryPoint) {
-        return _entryPoint;
+        return IEntryPoint(_entryPoint);
     }
 
     /// @notice Validates the signature of a user operation
@@ -69,7 +69,12 @@ contract EmailAccount is BaseAccount {
         // Optimizing this to return early if any of the checks fail causes gas estimation to be off by a lot in the bundler
         bool isUserOpHashValid = _pubSignals[0] == uint256(userOpHash) % p;
         bool isAccountCommitmentValid = _pubSignals[1] == ownerEmailCommitment;
-        bool isProofValid = verifier.verifyProof(_pA, _pB, _pC, _pubSignals);
+        bool isProofValid = IGroth16Verifier(verifier).verifyProof(
+            _pA,
+            _pB,
+            _pC,
+            _pubSignals
+        );
         bool result = isUserOpHashValid &&
             isAccountCommitmentValid &&
             isProofValid;

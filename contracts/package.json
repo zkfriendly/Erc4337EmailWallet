@@ -1,7 +1,15 @@
 {
   "name": "hardhat-project",
   "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.11"
+    "ethers": "^6.13.2",
+    "hardhat": "^2.22.11",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "@account-abstraction": "github:eth-infinitism/account-abstraction",
+    "@types/snarkjs": "^0.7.8",
+    "snarkjs": "^0.7.4"
   }
 }
