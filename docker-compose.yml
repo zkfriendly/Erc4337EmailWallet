@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  node:
+    build:
+      context: ./node
+      dockerfile: Dockerfile
+    ports:
+      - "8545:8545"
+    command: ["anvil", "--host", "0.0.0.0"]
+
+  bundler:
+    build:
+      context: ./bundler
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    command:
+      ["yarn", "run", "bundler", "--unsafe", "--network", "http://node:8545"]
+    depends_on:
+      - node

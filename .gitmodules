@@ -1,6 +1,0 @@
-[submodule "lib/relayer-smtp"]
-	path = lib/relayer-smtp
-	url = git@github.com:zkfriendly/relayer-smtp.git
-[submodule "lib/relayer-imap"]
-	path = lib/relayer-imap
-	url = git@github.com:zkfriendly/relayer-imap.git
