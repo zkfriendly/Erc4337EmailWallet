@@ -2,6 +2,7 @@ import { ethers } from "hardhat";
 import { JsonRpcProvider, Signer } from "ethers";
 import {
   EmailAccount,
+  EmailAccountFactory,
   EmailAccountDummyVerifier,
   HMockDkimRegistry,
 } from "../typechain";
@@ -85,14 +86,17 @@ describe("EmailAccountTest", () => {
         ethers.keccak256(ethers.toUtf8Bytes("sample_account_commitment"))
       ) % BigInt(p);
 
-    const factory = await ethers.getContractFactory("EmailAccount");
-    emailAccount = await factory.deploy(
+    const factory = await ethers.getContractFactory("EmailAccountFactory");
+    const emailAccountFactory = await factory.deploy(
       context.entryPointAddress,
       await verifier.getAddress(),
-      await dkimRegistry.getAddress(),
-      accountCommitment
+      await dkimRegistry.getAddress()
     );
-    await emailAccount.waitForDeployment();
+    await emailAccountFactory.waitForDeployment();
+  
+    // deploy the email account using the factory
+    await emailAccountFactory.createEmailAccount(accountCommitment);
+    emailAccount = await ethers.getContractAt("EmailAccount", await emailAccountFactory.computeAddress(accountCommitment));
 
     // fund the account
     await context.provider.send("hardhat_setBalance", [

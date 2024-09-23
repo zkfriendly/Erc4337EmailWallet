@@ -6,14 +6,16 @@ import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "./interfaces/IGroth16Verifier.sol";
 import "./interfaces/IDkimRegistry.sol";
 
-/// @title ERC-4337 EmailAccount
+/// @title EmailAccount - it is a minimal proxy that gets cloned by the factory according to EIP-1167
 /// @notice A contract for managing email-based accounts with DKIM verification
 /// @dev Implements BaseAccount for account abstraction
 contract EmailAccount is BaseAccount {
-    address private immutable _entryPoint;
+    address private _entryPoint;
     address public dkimRegistry; // Address of the DKIM registry to query validity of DKIM public key hashes
     uint256 public ownerEmailCommitment; // Hash of the owner's salted email
-    address public immutable verifier; // The ZK verifier for email integrity and ownership
+    address public verifier; // The ZK verifier for email integrity and ownership
+
+    bool public isInitialized;
 
     // BN128 field prime - used for reducing userOpHash to field size
     uint256 public constant p =
@@ -30,16 +32,20 @@ contract EmailAccount is BaseAccount {
     /// @param _verifier The Groth16 verifier contract
     /// @param _dkimRegistry The DKIM registry contract address
     /// @param _accountCommitment The initial account commitment
-    constructor(
+    function initialize(
         address anEntryPoint,
         address _verifier,
         address _dkimRegistry,
         uint256 _accountCommitment
-    ) {
+    ) public {
+        if(isInitialized) revert();
+        isInitialized = true;
+
         _entryPoint = anEntryPoint;
         verifier = _verifier;
         dkimRegistry = _dkimRegistry;
         ownerEmailCommitment = _accountCommitment % p;
+        
     }
 
     /// @notice Returns the EntryPoint contract
