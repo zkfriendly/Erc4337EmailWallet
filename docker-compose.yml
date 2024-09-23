@@ -17,3 +17,8 @@ services:
       ["yarn", "run", "bundler", "--unsafe", "--network", "http://node:8545"]
     depends_on:
       - node
+  
+  scanner:
+    image: otterscan/otterscan:latest
+    ports:
+      - "5100:80"
