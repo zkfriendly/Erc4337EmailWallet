@@ -40,7 +40,3 @@ services:
     image: otterscan/otterscan:latest
     ports:
       - "5100:80"
-    depends_on:
-      - node
-      - bundler
-      - contracts
