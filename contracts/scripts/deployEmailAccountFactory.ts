@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 (async() => {
     const bundlerProvider = new ethers.JsonRpcProvider(
-      "http://localhost:3000/rpc"
+     process.env.BUNDLER_URL
     );
 
     // get list of supported entrypoints

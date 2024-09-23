@@ -17,8 +17,30 @@ services:
       ["yarn", "run", "bundler", "--unsafe", "--network", "http://node:8545"]
     depends_on:
       - node
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+  
+  contracts:
+    build:
+      context: ./contracts
+      dockerfile: Dockerfile
+    environment:
+      - NODE_URL=http://node:8545
+      - BUNDLER_URL=http://bundler:3000/rpc
+    command: ["npx", "hardhat", "run", "scripts/deployEmailAccountFactory.ts", "--network", "dev"]
+    depends_on:
+      bundler:
+        condition: service_healthy
   
   scanner:
     image: otterscan/otterscan:latest
     ports:
       - "5100:80"
+    depends_on:
+      - node
+      - bundler
+      - contracts
