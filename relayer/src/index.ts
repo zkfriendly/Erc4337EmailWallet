@@ -1,6 +1,7 @@
    import express from 'express';
    import dotenv from 'dotenv';
-   import bodyParser from 'body-parser';
+   import quotedPrintable from 'quoted-printable';
+   import * as cheerio from 'cheerio';
 
    // Load environment variables from .env file
    dotenv.config();
@@ -25,13 +26,34 @@
    app.post('/signAndSend', (req, res) => {
      const body = req.body;
      if (typeof body === 'string') {
-       console.log(body);
-       res.status(200).send('String logged successfully');
+        // Decode the quoted-printable email body
+        const decodedBody = quotedPrintable.decode(body);
+
+        // Parse the HTML to extract the userOp div content
+        const $ = cheerio.load(decodedBody);
+        const userOpDiv = $('[id$="userOp"]').html();
+
+        if (userOpDiv) {
+          try {
+            const userOp = JSON.parse(userOpDiv);
+            res.status(200).send('userOp extracted successfully');
+          } catch (error) {
+            if (error instanceof Error) {
+              res.status(400).send(`Failed to parse userOp: ${error.message}`);
+            } else {
+              res.status(400).send('Failed to parse userOp: Unknown error');
+            }
+          }
+        } else {
+          res.status(400).send('userOp not found in the email body');
+        }
      } else {
-       res.status(400).send('Invalid input');
+       res.status(400).send('Invalid input: body is not a string');
      }
    });
 
    app.listen(port, () => {
      console.log(`Server is running on http://localhost:${port}`);
    });
+
+   export default app;
