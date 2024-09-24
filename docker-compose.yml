@@ -37,6 +37,8 @@ services:
     depends_on:
       bundler:
         condition: service_healthy
+    volumes:
+      - ./contracts/deployedAddresses:/usr/src/app/deployedAddresses  # Add this line to mount the volume
   
   scanner:
     image: otterscan/otterscan:latest
@@ -58,4 +60,9 @@ services:
     ports:
       - "${SMTP_PORT}:${SMTP_INTERNAL_SERVER_PORT}"
     command: ["./relayer-smtp"]
-
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${SMTP_INTERNAL_SERVER_PORT}/api/ping"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s

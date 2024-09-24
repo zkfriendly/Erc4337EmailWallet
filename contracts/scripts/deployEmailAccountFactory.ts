@@ -1,4 +1,7 @@
 import { ethers } from "hardhat";
+import * as fs from "fs";
+import * as path from "path";
+
 (async() => {
     const bundlerProvider = new ethers.JsonRpcProvider(
      process.env.BUNDLER_URL
@@ -34,6 +37,25 @@ import { ethers } from "hardhat";
     await factoryContract.waitForDeployment();
     const factoryAddress = await factoryContract.getAddress();
     
+    
+    // Save addresses to a file
+    const addresses = {
+      factoryAddress,
+      entryPointAddress,
+      verifierAddress,
+      dkimRegistryAddress,
+    };
+    
+    // Update the file path to the mounted volume
+    // create the deployedAddresses folder if it doesn't exist
+    const deployedAddressesDir = path.join(__dirname, "../deployedAddresses");
+    if (!fs.existsSync(deployedAddressesDir)) {
+      fs.mkdirSync(deployedAddressesDir);
+    }
+    const filePath = path.join(deployedAddressesDir, "EmailAccountFactory.json");
+    fs.writeFileSync(filePath, JSON.stringify(addresses, null, 2));
+    
     console.log("Factory deployed at", factoryAddress);
+    return addresses;
 
 })();

@@ -16,6 +16,9 @@ COPY scripts ./scripts
 COPY hardhat.config.ts ./
 COPY tsconfig.json ./
 
+# make folder for deployed addresses
+RUN mkdir -p deployedAddresses
+
 ENV NODE_URL=http://localhost:8545
 
 # Generate typechains and compile the contracts
