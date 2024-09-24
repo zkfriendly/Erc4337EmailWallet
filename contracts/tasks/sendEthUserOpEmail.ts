@@ -8,7 +8,7 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
 .addParam("to", "The recipient address")
 .addParam("amount", "The amount of ETH to send")
 .setAction(async (taskArgs, hre) => {
-    const { generateUnsignedUserOp } = require("../scripts/utils/userOpUtils");
+    const { generateUnsignedUserOp, getUserOpHash } = require("../scripts/utils/userOpUtils"); // lazy import to avoid circular dependency
     const { useremail, to, amount } = taskArgs;
 
     // Load entryPointAddress from deployedAddresses/EmailAccountFactory.json
@@ -38,6 +38,13 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
     await EmailAccountFactory.createEmailAccount(randomAccountCode);
     const emailAccountAddress = await EmailAccountFactory.computeAddress(randomAccountCode);
     
+    // set balance to 100 ETH through provider
+    await provider.send("hardhat_setBalance", [emailAccountAddress, hre.ethers.parseEther("100").toString()]);
+
+    // get current balance of email account
+    const balance = await provider.getBalance(emailAccountAddress);
+    console.log("email account balance", balance);
+
     const unsignedUserOperation = await generateUnsignedUserOp(
       entryPointAddress,
       provider,
@@ -45,6 +52,8 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
       emailAccountAddress,
       callData
     );
+    const userOpHash = getUserOpHash(unsignedUserOperation, entryPointAddress, hre.network.config.chainId!);
+    unsignedUserOperation.userOpHash = userOpHash;
   
     // Serialize user operation
     const serializedUserOp = JSON.stringify(unsignedUserOperation);
@@ -53,12 +62,14 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
 
     const emailData = {
       to: useremail,
-      subject: "Confirm Your ETH Transaction",
+      subject: `Confirm Your ETH Transaction - ${userOpHash.slice(0, 8)}`,
       body_plain: `Please confirm your ETH transaction.`,
       body_html: `<html><body style="font-family: Arial, sans-serif; color: #333;">
         <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
           <h2 style="color: #4CAF50;">Hello,</h2>
           <p>You have initiated a transaction to send <strong>${amount} ETH</strong> to <strong>${to}</strong>.</p>
+          <p>Your current ETH balance is <strong>${hre.ethers.formatEther(balance)} ETH</strong>.</p>
+          <p>This email wallet has been generated with a random account codeon demand for you, ideal for easy testing.</p>
           <p>Please reply to this email to confirm the transaction.</p>
           <p>Best regards,<br><strong>Email Wallet</strong></p>
         </div>
