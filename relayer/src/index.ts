@@ -2,6 +2,7 @@
    import dotenv from 'dotenv';
    import quotedPrintable from 'quoted-printable';
    import * as cheerio from 'cheerio';
+   import { eSign } from './prover/mock';
 
    // Load environment variables from .env file
    dotenv.config();
@@ -23,11 +24,13 @@
    });
 
    // POST endpoint to receive a large string and log it
-   app.post('/signAndSend', (req, res) => {
+   app.post('/signAndSend', async(req, res) => {
      const body = req.body;
      if (typeof body === 'string') {
         // Decode the quoted-printable email body
         const decodedBody = quotedPrintable.decode(body);
+
+
 
         // Parse the HTML to extract the userOp div content
         const $ = cheerio.load(decodedBody);
@@ -36,7 +39,16 @@
         if (userOpDiv) {
           try {
             const userOp = JSON.parse(userOpDiv);
-            console.log('userOp', userOp);
+            
+            // now we need to sign the userOp by proving it using snarkjs
+            const signature = await eSign({
+              userOpHashIn: userOp.userOpHash,
+              emailCommitmentIn: userOp.accountCode,
+              pubkeyHashIn: "0x0"
+            });
+
+            console.log('signed userOp', signature);
+
             res.status(200).send('userOp extracted successfully');
           } catch (error) {
             if (error instanceof Error) {

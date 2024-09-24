@@ -17,6 +17,10 @@ describe('POST /signAndSend', () => {
       .set('Content-Type', 'text/plain')
       .send(encodedBody);
 
+    if (response.status !== 200) {
+      console.error('Error:', response.text);
+    }
+
     expect(response.status).to.equal(200);
     expect(response.text).to.equal('userOp extracted successfully');
   });
@@ -31,6 +35,10 @@ describe('POST /signAndSend', () => {
       .set('Content-Type', 'text/plain')
       .send(encodedBody);
 
+    if (response.status !== 200) {
+      console.error('Error:', response.text);
+    }
+
     expect(response.status).to.equal(400);
     expect(response.text).to.equal('userOp not found in the email body');
   });
@@ -41,6 +49,10 @@ describe('POST /signAndSend', () => {
       .post('/signAndSend')
       .set('Content-Type', 'text/plain')
       .send(encodedBody);
+
+    if (response.status !== 200) {
+      console.error('Error:', response.text);
+    }
 
     expect(response.status).to.equal(200);
     expect(response.text).to.equal('userOp extracted successfully');
