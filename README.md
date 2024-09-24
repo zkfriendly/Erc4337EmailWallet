@@ -17,7 +17,7 @@ This project implements an Email Wallet using the ERC4337 standard.
    cp .env.example .env
    ```
 
-   Edit `.env` with your providers SMTP credentials. This is used to send emails to users when they want to create an account or send transactions.
+   Edit `.env` with your providers SMTP and IMAP credentials. SMPT is used to send emails to users when they want to create an account or send transactions. IMAP is used to receive emails from users.
 
 1. Start the local blockchain node and bundler:
 
