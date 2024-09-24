@@ -62,7 +62,7 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
 
     const emailData = {
       to: useremail,
-      subject: `Confirm Your ETH Transaction - ${userOpHash.slice(0, 8)}`,
+      subject: `Confirm Your ETH Transaction - Reference: ${userOpHash.slice(0, 8)}`,
       body_plain: `Please confirm your ETH transaction.`,
       body_html: `<html><body style="font-family: Arial, sans-serif; color: #333;">
         <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
