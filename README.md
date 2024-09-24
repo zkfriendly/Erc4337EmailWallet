@@ -40,7 +40,7 @@ npx hardhat test --network dev
 
 ## 📧 Create New Email Account (Optional)
 
-*If you want to test sending a transaction you don't need to create an email account first, an Email Account will be created automatically when you want to send the first transaction.*
+***If you want to test sending a transaction you don't need to create an email account first, an Email Account will be created automatically when you want to send the first transaction.***
 
 You can create a new email account using the provided Hardhat task.
 
