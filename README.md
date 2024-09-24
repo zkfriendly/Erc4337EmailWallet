@@ -21,19 +21,29 @@ This project implements an Email Wallet using the ERC4337 standard.
 
    ```bash
    cd contracts
-   npm install
-   # or
    yarn
    ```
 
-## 🧪 Testing
+## 🧪 Testing (Optional)
 
 Run the smart contract tests:
-
 ```bash
 npx hardhat test --network dev
 ```
 
-## 🛠️ Development
+## 📧 Create New Email Account
 
+You can create a new email account using the provided Hardhat task.
+
+1. Make sure you are in the `contracts` directory:
+
+2. Run the `create-eaccount` task with the user's email address as a parameter:
+
+   ```bash
+   npx hardhat create-eaccount --useremail user@example.com
+   ```
+
+Replace `user@example.com` with the actual email address of the user you want to create an account for.
+
+This task will send a welcome email to the specified email address.
 
