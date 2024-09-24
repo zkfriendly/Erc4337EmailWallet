@@ -2,15 +2,15 @@ import { ethers } from "hardhat";
 import { JsonRpcProvider, Signer } from "ethers";
 import {
   EmailAccount,
-  EmailAccountFactory,
   EmailAccountDummyVerifier,
   HMockDkimRegistry,
 } from "../typechain";
-import { eSign, mockProver } from "./utils";
+import { eSign, mockProver } from "../scripts/utils/prover";
+import { generateUnsignedUserOp } from "../scripts/utils/userOpUtils";
 import sendUserOpAndWait, {
   createUserOperation,
   getUserOpHash,
-} from "./userOpUtils";
+} from "../scripts/utils/userOpUtils";
 import { expect } from "chai";
 
 describe("EmailAccountTest", () => {
@@ -208,52 +208,46 @@ describe("EmailAccountTest", () => {
   });
 
   async function prepareUserOp(callData: string) {
-    // used for gas estimation simulation
-    const dummySignature = await eSign({
-      userOpHashIn: "0x0",
-      emailCommitmentIn: accountCommitment.toString(),
-      pubkeyHashIn: domainPubKeyHash.toString(),
-    });
-
-    const unsignedUserOperation = await createUserOperation(
+    const unsignedUserOperation = await generateUnsignedUserOp(
+      context.entryPointAddress,
       context.provider,
       context.bundlerProvider,
       await emailAccount.getAddress(),
-      { factory: "0x", factoryData: "0x" },
-      callData,
-      context.entryPointAddress,
-      dummySignature // Temporary placeholder for signature
+      callData
     );
+    return await signUserOp(unsignedUserOperation);
+  }
 
-    // Calculate userOpHash
+  async function signUserOp(unsignedUserOperation: any) {
     const chainId = await context.provider
       .getNetwork()
       .then((network) => network.chainId);
-    let userOpHash = getUserOpHash(
+    const userOpHash = getUserOpHash(
       unsignedUserOperation,
       context.entryPointAddress,
       Number(chainId)
     );
 
-    // Update the userOperation with the calculated signature
-    let signedUserOperation = unsignedUserOperation;
-    signedUserOperation.signature = await eSign({
+    unsignedUserOperation.signature = await eSign({
       userOpHashIn: userOpHash,
       emailCommitmentIn: accountCommitment.toString(),
       pubkeyHashIn: domainPubKeyHash.toString(),
     });
-    return signedUserOperation;
+
+    return unsignedUserOperation;
   }
 
   async function assertSendEth(amount: bigint) {
     const recipientBalanceBefore = await context.provider.getBalance(
       recipientAddress
     );
-    const callData = emailAccount.interface.encodeFunctionData("execute", [
-      recipientAddress,
-      amount,
-      "0x",
-    ]);
+
+    const executeFunctionSelector = "0x" + ethers.id("execute(address,uint256,bytes)").slice(2, 10);
+    const callData = executeFunctionSelector + ethers.AbiCoder.defaultAbiCoder().encode(
+      ["address", "uint256", "bytes"],
+      [recipientAddress, amount, "0x"]
+    ).slice(2);
+    
     const userOp = await prepareUserOp(callData);
     await sendUserOpAndWait(
       userOp,

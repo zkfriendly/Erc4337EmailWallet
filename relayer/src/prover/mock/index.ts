@@ -1,14 +1,12 @@
-import { BigNumberish, BytesLike, ethers } from "ethers";
+import { ethers } from "ethers";
 import * as snarkjs from "snarkjs";
-import { FactoryParams, UserOperation } from "./userOpUtils";
-import { IEntryPoint__factory } from "../typechain-types";
 
 export async function mockProver(input: any) {
   // Load the circuit
   const { proof, publicSignals } = await snarkjs.groth16.fullProve(
     input,
-    "test/prover/mock/main.wasm",
-    "test/prover/mock/groth16_pkey.zkey"
+    "src/prover/mock/main.wasm",
+    "src/prover/mock/groth16_pkey.zkey"
   );
 
   let solidityCalldata = await snarkjs.groth16.exportSolidityCallData(
@@ -39,3 +37,4 @@ export async function eSign(input: {
 
   return signature;
 }
+
