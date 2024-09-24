@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import quotedPrintable from 'quoted-printable';
 import * as cheerio from 'cheerio';
 import { eSign } from './prover/mock';
-import { BigNumberish, BytesLike, ethers } from 'ethers';
 import { sendUserOpAndWait } from './userOpUtils';
 
 // Load environment variables from .env file
@@ -51,7 +50,7 @@ app.post('/signAndSend', async (req, res) => {
         userOp.signature = signature;
 
         // now we need to send the userOp to the bundler
-        await sendUserOpAndWait(userOp);  
+      await sendUserOpAndWait(userOp);          
 
         res.status(200).send('userOp extracted successfully');
       } catch (error) {

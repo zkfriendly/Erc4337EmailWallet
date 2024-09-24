@@ -34,7 +34,7 @@ export async function sendUserOpAndWait(
     entryPoint,
   ])) as string;
 
-  let receipt: { success: boolean } | null = null;
+  let receipt: any;
 
   let attempts = 0;
 
@@ -43,7 +43,7 @@ export async function sendUserOpAndWait(
 
     receipt = (await bundlerProvider.send("eth_getUserOperationReceipt", [
       userOpHash,
-    ])) as { success: boolean } | null;
+    ]))
 
     attempts++;
   }
