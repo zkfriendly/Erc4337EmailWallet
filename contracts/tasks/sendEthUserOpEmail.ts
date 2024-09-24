@@ -20,9 +20,6 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
       throw new Error("Entry point address not found in deployedAddresses/EmailAccountFactory.json");
     }
 
-    console.log("bundler url", process.env.BUNDLER_URL);
-    console.log("node url", process.env.NODE_URL);
-
     // take node bundler and node provider from environment variables
     const bundlerProvider = new hre.ethers.JsonRpcProvider(process.env.BUNDLER_URL!);
     const provider = new hre.ethers.JsonRpcProvider(process.env.NODE_URL!);
@@ -43,7 +40,6 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
 
     // get current balance of email account
     const balance = await provider.getBalance(emailAccountAddress);
-    console.log("email account balance", balance);
 
     const unsignedUserOperation = await generateUnsignedUserOp(
       entryPointAddress,

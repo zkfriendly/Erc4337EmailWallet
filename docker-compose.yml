@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   node:
     build:
@@ -39,6 +37,7 @@ services:
         condition: service_healthy
     volumes:
       - ./contracts/deployedAddresses:/usr/src/app/deployedAddresses  # Add this line to mount the volume
+  
   scanner:
     image: otterscan/otterscan:latest
     ports:
@@ -52,7 +51,7 @@ services:
       - SERVER_HOST=${SMTP_INTERNAL_SERVER_HOST}
       - SERVER_PORT=${SMTP_INTERNAL_SERVER_PORT}
       - SMTP_DOMAIN_NAME=${SMTP_DOMAIN_NAME}
-      - SMTP_LOGIN_ID=${SMTP_LOGIN_ID}   # IMAP login id - usually your email address.
+      - SMTP_LOGIN_ID=${SMTP_LOGIN_ID}
       - SMTP_LOGIN_PASSWORD=${SMTP_LOGIN_PASSWORD}
       - MESSAGE_ID_DOMAIN=${SMTP_MESSAGE_ID_DOMAIN}
       - JSON_LOGGER=${SMPT_JSON_LOGGER}
@@ -71,7 +70,7 @@ services:
       context: .
       dockerfile: Dockerfile.imap
     environment:
-      - RELAYER_ENDPOINT=http://localhost
+      - RELAYER_ENDPOINT=http://relayer:${RELAYER_PORT}/signAndSend
       - IMAP_LOGIN_ID=${IMAP_LOGIN_ID}
       - IMAP_LOGIN_PASSWORD=${IMAP_LOGIN_PASSWORD}
       - IMAP_DOMAIN_NAME=${IMAP_DOMAIN_NAME}
@@ -79,3 +78,15 @@ services:
       - AUTH_TYPE=${IMAP_AUTH_TYPE}
       - JSON_LOGGER=${IMAP_JSON_LOGGER}
     command: ["relayer-imap"]
+    depends_on:
+      - relayer
+  
+  relayer:
+    build:
+      context: ./relayer
+      dockerfile: Dockerfile
+    ports:
+      - "${RELAYER_PORT}:${RELAYER_PORT}"
+    environment:
+      - PORT=${RELAYER_PORT}
+    command: ["yarn", "start"]
