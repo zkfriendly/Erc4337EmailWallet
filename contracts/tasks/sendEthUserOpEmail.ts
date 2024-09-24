@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import { generateUnsignedUserOp } from "../test/userOpUtils";
+import { generateUnsignedUserOp } from "../scripts/utils/userOpUtils";
 
 task("esend-eth", "Sends ETH to a specified address and sends a confirmation email to the user")
   .addParam("useremail", "The email address of the user")

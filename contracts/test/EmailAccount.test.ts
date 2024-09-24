@@ -6,11 +6,11 @@ import {
   HMockDkimRegistry,
 } from "../typechain";
 import { eSign, mockProver } from "../scripts/utils/prover";
-import { generateUnsignedUserOp } from "./userOpUtils";
+import { generateUnsignedUserOp } from "../scripts/utils/userOpUtils";
 import sendUserOpAndWait, {
   createUserOperation,
   getUserOpHash,
-} from "./userOpUtils";
+} from "../scripts/utils/userOpUtils";
 import { expect } from "chai";
 
 describe("EmailAccountTest", () => {

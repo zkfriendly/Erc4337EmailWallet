@@ -8,10 +8,10 @@ import {
   JsonRpcProvider,
   keccak256,
 } from "ethers";
-import { PackedUserOperationStruct } from "../typechain/contracts/EmailAccount";
+import { PackedUserOperationStruct } from "../../typechain/contracts/EmailAccount";
 import { ethers } from "ethers";
-import { IEntryPoint__factory } from "../typechain";
-import { eSign } from "../scripts/utils/prover";
+import { IEntryPoint__factory } from "../../typechain";
+import { eSign } from "./prover";
 
 /**
  * @notice these utils have been largely copied from ERC4337Utils.ts in eth-infinitism's
