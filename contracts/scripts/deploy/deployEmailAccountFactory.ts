@@ -48,7 +48,7 @@ import * as path from "path";
     
     // Update the file path to the mounted volume
     // create the deployedAddresses folder if it doesn't exist
-    const deployedAddressesDir = path.join(__dirname, "../deployedAddresses");
+    const deployedAddressesDir = path.join(__dirname, "../../deployedAddresses");
     if (!fs.existsSync(deployedAddressesDir)) {
       fs.mkdirSync(deployedAddressesDir);
     }
