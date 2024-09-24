@@ -47,7 +47,7 @@ You can send a transaction using the provided Hardhat task `esend-eth`.
 2. Run the `esend-eth` task with the user's email address and the transaction details as parameters - note this tool only supports sending ETH to an address, however the underlying Email Account contract supports any ERC-4337 `userOperation`:
 
    ```bash
-   npx hardhat esend-eth --useremail user@example.com --amount 1 --to 0xRecipientEthereumAddress --network dev
+   npx hardhat esend-eth --useremail user@example.com --amount 2 --to 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --network dev
    ```
 
 Replace `user@example.com` with the actual email address of the user, `1` with the amount of ETH to send, and `0xRecipientEthereumAddress` with the actual recipient address.
