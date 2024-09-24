@@ -14,14 +14,15 @@ This project implements an Email Wallet using the ERC4337 standard.
 1. Start the local blockchain node and bundler:
 
    ```bash
-   docker compose up
+   docker compose up -d
    ```
 
-2. Install contract dependencies:
+2. Install contract dependencies and setup environment variables:
 
    ```bash
    cd contracts
    yarn
+   cp .env.example .env
    ```
 
 ## 🧪 Testing (Optional)
