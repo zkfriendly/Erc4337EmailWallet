@@ -11,6 +11,14 @@ This project implements an Email Wallet using the ERC4337 standard.
 
 ### Setup
 
+0. Setup environment variables:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env` with your providers SMTP credentials. This is used to send emails to users when they want to create an account or send transactions.
+
 1. Start the local blockchain node and bundler:
 
    ```bash
@@ -20,9 +28,7 @@ This project implements an Email Wallet using the ERC4337 standard.
 2. Install contract dependencies and setup environment variables:
 
    ```bash
-   cd contracts
-   yarn
-   cp .env.example .env
+   cd contracts && yarn && cp .env.example .env
    ```
 
 ## 🧪 Testing (Optional)
