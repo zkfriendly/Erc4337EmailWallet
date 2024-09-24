@@ -2,11 +2,11 @@ import { ethers } from "hardhat";
 import { JsonRpcProvider, Signer } from "ethers";
 import {
   EmailAccount,
-  EmailAccountFactory,
   EmailAccountDummyVerifier,
   HMockDkimRegistry,
 } from "../typechain";
-import { eSign, mockProver, generateUnsignedUserOp } from "../scripts/utils";
+import { eSign, mockProver } from "../scripts/utils/prover";
+import { generateUnsignedUserOp } from "./userOpUtils";
 import sendUserOpAndWait, {
   createUserOperation,
   getUserOpHash,

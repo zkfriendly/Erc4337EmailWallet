@@ -1,14 +1,12 @@
-import { BigNumberish, BytesLike, ethers, JsonRpcProvider } from "ethers";
+import { ethers } from "ethers";
 import * as snarkjs from "snarkjs";
-import { createUserOperation, FactoryParams, UserOperation } from "../../test/userOpUtils";
-import { IEntryPoint__factory } from "../../typechain";
 
 export async function mockProver(input: any) {
   // Load the circuit
   const { proof, publicSignals } = await snarkjs.groth16.fullProve(
     input,
-    "test/prover/mock/main.wasm",
-    "test/prover/mock/groth16_pkey.zkey"
+    "scripts/utils/prover/mock/main.wasm",
+    "scripts/utils/prover/mock/groth16_pkey.zkey"
   );
 
   let solidityCalldata = await snarkjs.groth16.exportSolidityCallData(
@@ -40,26 +38,3 @@ export async function eSign(input: {
   return signature;
 }
 
-export async function generateUnsignedUserOp(
-  entryPointAddress: string,
-  provider: JsonRpcProvider,
-  bundlerProvider: JsonRpcProvider,
-  emailAccountAddress: string,
-  callData: string
-) {
-  const dummySignature = await eSign({
-    userOpHashIn: "0x0",
-    emailCommitmentIn: "0x0",
-    pubkeyHashIn: "0x0",
-  });
-
-  return await createUserOperation(
-    provider,
-    bundlerProvider,
-    emailAccountAddress,
-    { factory: "0x", factoryData: "0x" },
-    callData,
-    entryPointAddress,
-    dummySignature // Temporary placeholder for signature
-  );
-}

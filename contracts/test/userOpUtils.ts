@@ -5,11 +5,13 @@ import {
   concat,
   hexlify,
   isHexString,
+  JsonRpcProvider,
   keccak256,
 } from "ethers";
 import { PackedUserOperationStruct } from "../typechain/contracts/EmailAccount";
 import { ethers } from "ethers";
 import { IEntryPoint__factory } from "../typechain";
+import { eSign } from "../scripts/utils/prover";
 
 /**
  * @notice these utils have been largely copied from ERC4337Utils.ts in eth-infinitism's
@@ -372,3 +374,28 @@ export async function sleep(ms: number) {
     setTimeout(resolve, ms);
   });
 }
+
+export async function generateUnsignedUserOp(
+  entryPointAddress: string,
+  provider: JsonRpcProvider,
+  bundlerProvider: JsonRpcProvider,
+  emailAccountAddress: string,
+  callData: string
+) {
+  const dummySignature = await eSign({
+    userOpHashIn: "0x0",
+    emailCommitmentIn: "0x0",
+    pubkeyHashIn: "0x0",
+  });
+
+  return await createUserOperation(
+    provider,
+    bundlerProvider,
+    emailAccountAddress,
+    { factory: "0x", factoryData: "0x" },
+    callData,
+    entryPointAddress,
+    dummySignature // Temporary placeholder for signature
+  );
+}
+
