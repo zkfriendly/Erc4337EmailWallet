@@ -6,13 +6,12 @@ import {
   EmailAccountDummyVerifier,
   HMockDkimRegistry,
 } from "../typechain";
-import { eSign, mockProver } from "./utils";
+import { eSign, mockProver, generateUnsignedUserOp } from "../scripts/utils";
 import sendUserOpAndWait, {
   createUserOperation,
   getUserOpHash,
 } from "./userOpUtils";
 import { expect } from "chai";
-import { generateUnsignedUserOp } from "./utils";
 
 describe("EmailAccountTest", () => {
   let context: {

@@ -15,6 +15,7 @@ COPY contracts ./contracts
 COPY scripts ./scripts
 COPY hardhat.config.ts ./
 COPY tsconfig.json ./
+COPY tasks ./tasks
 
 # make folder for deployed addresses
 RUN mkdir -p deployedAddresses

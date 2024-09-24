@@ -2,7 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ethers";
 import * as dotenv from "dotenv";
-import "./tasks/createEmailAccount"; 
+import "./tasks/createEmailAccount" 
 
 dotenv.config();
 

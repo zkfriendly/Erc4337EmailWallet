@@ -1,7 +1,7 @@
 import { BigNumberish, BytesLike, ethers, JsonRpcProvider } from "ethers";
 import * as snarkjs from "snarkjs";
-import { createUserOperation, FactoryParams, UserOperation } from "./userOpUtils";
-import { IEntryPoint__factory } from "../typechain";
+import { createUserOperation, FactoryParams, UserOperation } from "../../test/userOpUtils";
+import { IEntryPoint__factory } from "../../typechain";
 
 export async function mockProver(input: any) {
   // Load the circuit
