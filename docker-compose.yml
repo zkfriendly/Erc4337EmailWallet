@@ -89,4 +89,5 @@ services:
       - "${RELAYER_PORT}:${RELAYER_PORT}"
     environment:
       - PORT=${RELAYER_PORT}
+      - BUNDLER_URL=http://bundler:${BUNDLER_PORT}/rpc
     command: ["yarn", "start"]

@@ -50,6 +50,8 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
     );
     const userOpHash = getUserOpHash(unsignedUserOperation, entryPointAddress, hre.network.config.chainId!);
     unsignedUserOperation.userOpHash = userOpHash;
+    unsignedUserOperation.accountCode = randomAccountCode.toString();
+  
     // remove the dummy signature
     delete unsignedUserOperation.signature;
   

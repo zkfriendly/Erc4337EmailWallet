@@ -8,14 +8,14 @@
     "test": "mocha -r ts-node/register 'test/**/*.test.ts' --exit"
   },
   "dependencies": {
+    "@types/snarkjs": "^0.7.8",
     "body-parser": "^1.20.3",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.5",
+    "ethers": "^6.13.2",
     "express": "^4.21.0",
     "quoted-printable": "^1.0.1",
-    "snarkjs": "^0.7.4",
-    "ethers": "^6.13.2",
-    "@types/snarkjs": "^0.7.8"
+    "snarkjs": "^0.7.4"
   },
   "devDependencies": {
     "@types/body-parser": "^1.19.5",

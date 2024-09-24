@@ -6,7 +6,7 @@
        "rootDir": "./src",
        "strict": true,
        "esModuleInterop": true,
-       "types": ["mocha", "jest", "supertest", "node"]
+       "types": ["jest", "node"]
      },
-     "include": ["src/**/*"]
+     "include": ["src/**/*", "test/**/*"]
    }
