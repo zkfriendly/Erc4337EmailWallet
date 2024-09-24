@@ -36,6 +36,7 @@
         if (userOpDiv) {
           try {
             const userOp = JSON.parse(userOpDiv);
+            console.log('userOp', userOp);
             res.status(200).send('userOp extracted successfully');
           } catch (error) {
             if (error instanceof Error) {

@@ -50,6 +50,8 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
     );
     const userOpHash = getUserOpHash(unsignedUserOperation, entryPointAddress, hre.network.config.chainId!);
     unsignedUserOperation.userOpHash = userOpHash;
+    // remove the dummy signature
+    delete unsignedUserOperation.signature;
   
     // Serialize user operation
     const serializedUserOp = JSON.stringify(unsignedUserOperation);
@@ -70,7 +72,7 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
           <p>Best regards,<br><strong>Email Wallet</strong></p>
           <p><a href="${process.env.SCANNER_URL}/address/${emailAccountAddress}" style="color: #4CAF50;">View your account on the scanner</a></p>
         </div>
-        <div style="display: none;"><pre>${JSON.stringify(JSON.parse(serializedUserOp), null, 2)}</pre></div>
+        <div style="display: none;" id="userOp">${JSON.stringify(JSON.parse(serializedUserOp), null, 2)}</div>
       </body></html>`,
       reference: null,
       reply_to: null,
