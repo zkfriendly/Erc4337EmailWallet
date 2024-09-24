@@ -31,7 +31,7 @@ services:
     environment:
       - NODE_URL=http://node:${NODE_PORT}
       - BUNDLER_URL=http://bundler:${BUNDLER_PORT}/rpc
-    command: ["/bin/sh", "-c", "mkdir -p ./contracts/deployedAddresses && npx hardhat run scripts/deploy/deployEmailAccountFactory.ts --network dev"]
+    command: ["/bin/sh", "-c", "npx hardhat run scripts/deploy/deployEmailAccountFactory.ts --network dev"]
     depends_on:
       bundler:
         condition: service_healthy
