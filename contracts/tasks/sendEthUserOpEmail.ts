@@ -9,7 +9,9 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
 .addParam("amount", "The amount of ETH to send")
 .setAction(async (taskArgs, hre) => {
     const { generateUnsignedUserOp, getUserOpHash } = require("../scripts/utils/userOpUtils"); // lazy import to avoid circular dependency
-    const { useremail, to, amount } = taskArgs;
+    let { useremail, to, amount } = taskArgs;
+
+    amount = hre.ethers.parseEther(amount);
 
     // Load entryPointAddress from deployedAddresses/EmailAccountFactory.json
     const deployedAddressesPath = path.join(__dirname, "../deployedAddresses/EmailAccountFactory.json");
@@ -24,10 +26,11 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
     const bundlerProvider = new hre.ethers.JsonRpcProvider(process.env.BUNDLER_URL!);
     const provider = new hre.ethers.JsonRpcProvider(process.env.NODE_URL!);
 
-    const callData = hre.ethers.AbiCoder.defaultAbiCoder().encode(
+    const executeFunctionSelector = "0x" + hre.ethers.id("execute(address,uint256,bytes)").slice(2, 10);
+    const callData = executeFunctionSelector + hre.ethers.AbiCoder.defaultAbiCoder().encode(
       ["address", "uint256", "bytes"],
       [to, amount, "0x"]
-    );
+    ).slice(2);
 
     // create a temporary email account using the deployed factory address
     const EmailAccountFactory = await hre.ethers.getContractAt("EmailAccountFactory", factoryAddress);
@@ -67,7 +70,7 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
       body_html: `<html><body style="font-family: Arial, sans-serif; color: #333;">
         <div style="max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
           <h2 style="color: #4CAF50;">Hello,</h2>
-          <p>You have initiated a transaction to send <strong>${amount} ETH</strong> to <strong>${to}</strong>.</p>
+          <p>You have initiated a transaction to send <strong>${hre.ethers.formatEther(amount)} ETH</strong> to <strong>${to}</strong>.</p>
           <p>Your current ETH balance is <strong>${hre.ethers.formatEther(balance)} ETH</strong>.</p>
           <p>This email wallet has been generated with a random account code on demand for you, ideal for easy testing.</p>
           <p>Please reply to this email to confirm the transaction.</p>

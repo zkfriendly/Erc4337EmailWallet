@@ -241,11 +241,13 @@ describe("EmailAccountTest", () => {
     const recipientBalanceBefore = await context.provider.getBalance(
       recipientAddress
     );
-    const callData = emailAccount.interface.encodeFunctionData("execute", [
-      recipientAddress,
-      amount,
-      "0x",
-    ]);
+
+    const executeFunctionSelector = "0x" + ethers.id("execute(address,uint256,bytes)").slice(2, 10);
+    const callData = executeFunctionSelector + ethers.AbiCoder.defaultAbiCoder().encode(
+      ["address", "uint256", "bytes"],
+      [recipientAddress, amount, "0x"]
+    ).slice(2);
+    
     const userOp = await prepareUserOp(callData);
     await sendUserOpAndWait(
       userOp,
