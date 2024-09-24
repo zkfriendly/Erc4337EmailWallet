@@ -2,13 +2,13 @@ import { task } from "hardhat/config";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import { generateUnsignedUserOp } from "../scripts/utils/userOpUtils";
 
 task("esend-eth", "Sends ETH to a specified address and sends a confirmation email to the user")
-  .addParam("useremail", "The email address of the user")
-  .addParam("to", "The recipient address")
-  .addParam("amount", "The amount of ETH to send")
-  .setAction(async (taskArgs, hre) => {
+.addParam("useremail", "The email address of the user")
+.addParam("to", "The recipient address")
+.addParam("amount", "The amount of ETH to send")
+.setAction(async (taskArgs, hre) => {
+    const { generateUnsignedUserOp } = require("../scripts/utils/userOpUtils");
     const { useremail, to, amount } = taskArgs;
 
     // Load entryPointAddress from deployedAddresses/EmailAccountFactory.json
@@ -19,6 +19,9 @@ task("esend-eth", "Sends ETH to a specified address and sends a confirmation ema
     if (!entryPointAddress) {
       throw new Error("Entry point address not found in deployedAddresses/EmailAccountFactory.json");
     }
+
+    console.log("bundler url", process.env.BUNDLER_URL);
+    console.log("node url", process.env.NODE_URL);
 
     // take node bundler and node provider from environment variables
     const bundlerProvider = new hre.ethers.JsonRpcProvider(process.env.BUNDLER_URL!);
