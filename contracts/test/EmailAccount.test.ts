@@ -12,6 +12,7 @@ import sendUserOpAndWait, {
   getUserOpHash,
 } from "./userOpUtils";
 import { expect } from "chai";
+import { generateUnsignedUserOp } from "./utils";
 
 describe("EmailAccountTest", () => {
   let context: {
@@ -208,41 +209,33 @@ describe("EmailAccountTest", () => {
   });
 
   async function prepareUserOp(callData: string) {
-    // used for gas estimation simulation
-    const dummySignature = await eSign({
-      userOpHashIn: "0x0",
-      emailCommitmentIn: accountCommitment.toString(),
-      pubkeyHashIn: domainPubKeyHash.toString(),
-    });
-
-    const unsignedUserOperation = await createUserOperation(
+    const unsignedUserOperation = await generateUnsignedUserOp(
+      context.entryPointAddress,
       context.provider,
       context.bundlerProvider,
       await emailAccount.getAddress(),
-      { factory: "0x", factoryData: "0x" },
-      callData,
-      context.entryPointAddress,
-      dummySignature // Temporary placeholder for signature
+      callData
     );
+    return await signUserOp(unsignedUserOperation);
+  }
 
-    // Calculate userOpHash
+  async function signUserOp(unsignedUserOperation: any) {
     const chainId = await context.provider
       .getNetwork()
       .then((network) => network.chainId);
-    let userOpHash = getUserOpHash(
+    const userOpHash = getUserOpHash(
       unsignedUserOperation,
       context.entryPointAddress,
       Number(chainId)
     );
 
-    // Update the userOperation with the calculated signature
-    let signedUserOperation = unsignedUserOperation;
-    signedUserOperation.signature = await eSign({
+    unsignedUserOperation.signature = await eSign({
       userOpHashIn: userOpHash,
       emailCommitmentIn: accountCommitment.toString(),
       pubkeyHashIn: domainPubKeyHash.toString(),
     });
-    return signedUserOperation;
+
+    return unsignedUserOperation;
   }
 
   async function assertSendEth(amount: bigint) {

@@ -1,7 +1,7 @@
-import { BigNumberish, BytesLike, ethers } from "ethers";
+import { BigNumberish, BytesLike, ethers, JsonRpcProvider } from "ethers";
 import * as snarkjs from "snarkjs";
-import { FactoryParams, UserOperation } from "./userOpUtils";
-import { IEntryPoint__factory } from "../typechain-types";
+import { createUserOperation, FactoryParams, UserOperation } from "./userOpUtils";
+import { IEntryPoint__factory } from "../typechain";
 
 export async function mockProver(input: any) {
   // Load the circuit
@@ -38,4 +38,28 @@ export async function eSign(input: {
   );
 
   return signature;
+}
+
+export async function generateUnsignedUserOp(
+  entryPointAddress: string,
+  provider: JsonRpcProvider,
+  bundlerProvider: JsonRpcProvider,
+  emailAccountAddress: string,
+  callData: string
+) {
+  const dummySignature = await eSign({
+    userOpHashIn: "0x0",
+    emailCommitmentIn: "0x0",
+    pubkeyHashIn: "0x0",
+  });
+
+  return await createUserOperation(
+    provider,
+    bundlerProvider,
+    emailAccountAddress,
+    { factory: "0x", factoryData: "0x" },
+    callData,
+    entryPointAddress,
+    dummySignature // Temporary placeholder for signature
+  );
 }
