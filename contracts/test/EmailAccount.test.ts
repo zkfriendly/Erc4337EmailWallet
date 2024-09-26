@@ -66,8 +66,10 @@ describe("EmailAccountTest", () => {
   before(async () => {
     context = await setupTests();
     [owner, recipient] = await ethers.getSigners();
+    console.log("owner", await owner.getAddress());
+    console.log("owner balance:", ethers.formatEther(await context.provider.getBalance(await owner.getAddress())));
 
-    recipientAddress = await recipient.getAddress();
+    recipientAddress = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
     const verifierFactory = await ethers.getContractFactory(
       "EmailAccountDummyVerifier"
     );
@@ -98,11 +100,11 @@ describe("EmailAccountTest", () => {
     await emailAccountFactory.createEmailAccount(accountCommitment);
     emailAccount = await ethers.getContractAt("EmailAccount", await emailAccountFactory.computeAddress(accountCommitment));
 
-    // fund the account
-    await context.provider.send("hardhat_setBalance", [
-      await emailAccount.getAddress(),
-      ethers.parseEther("1000").toString(),
-    ]);
+    // fund the account from owner's account
+    await owner.sendTransaction({
+      to: await emailAccount.getAddress(),
+      value: ethers.parseEther("1000")
+    });
   });
 
   it("should load the mock prover", async () => {

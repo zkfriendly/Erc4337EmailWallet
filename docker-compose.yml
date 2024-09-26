@@ -1,11 +1,18 @@
 services:
   node:
-    build:
-      context: .
-      dockerfile: Dockerfile.node
+    image: ethereum/client-go:v1.13.5
     ports:
-      - "${NODE_PORT}:${NODE_PORT}"
-    command: ["anvil", "--host", "0.0.0.0"]
+      - "${NODE_PORT}:8545"
+    command: [
+      "--miner.gaslimit", "12000000",
+      "--http", "--http.api", "personal,eth,net,web3,debug",
+      "--http.vhosts", "*,localhost,host.docker.internal", "--http.addr", "0.0.0.0",
+      "--allow-insecure-unlock", "--rpc.allow-unprotected-txs",
+      "--dev",
+      "--verbosity", "2",
+      "--nodiscover", "--maxpeers", "0", "--mine",
+      "--networkid", "1337"
+    ]
 
   bundler:
     build:
@@ -14,7 +21,7 @@ services:
     ports:
       - "${BUNDLER_PORT}:${BUNDLER_PORT}"
     command:
-      ["yarn", "run", "bundler", "--unsafe", "--network", "http://node:${NODE_PORT}"]
+      ["yarn", "run", "bundler", "--network", "http://node:${NODE_PORT}"]
     depends_on:
       - node
     healthcheck:

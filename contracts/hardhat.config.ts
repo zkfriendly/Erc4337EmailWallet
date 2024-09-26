@@ -17,7 +17,7 @@ const config: HardhatUserConfig = {
   solidity: "0.8.27",
   networks: {
     dev: {
-      chainId: 31337,
+      chainId: 1337.,
       url: NODE_URL,
     },
   },
