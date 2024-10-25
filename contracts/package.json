@@ -22,6 +22,7 @@
   "dependencies": {
     "@account-abstraction": "https://github.com/eth-infinitism/account-abstraction",
     "@openzeppelin/contracts": "^5.0.2",
+    "@rhinestone/modulekit": "^0.4.13",
     "@types/snarkjs": "^0.7.8",
     "dotenv": "^16.4.5",
     "snarkjs": "^0.7.4"
