@@ -39,8 +39,9 @@ describe("EmailAccountTest", () => {
   async function setupTests() {
     const [admin, owner] = await ethers.getSigners();
     const provider = new ethers.JsonRpcProvider("http://localhost:8545");
+    
     const bundlerProvider = new ethers.JsonRpcProvider(
-      "http://localhost:3000/rpc"
+      process.env.BUNDLER === "unsafe" ? "http://localhost:3002/rpc" : "http://localhost:3000/rpc"
     );
 
     // get list of supported entrypoints
@@ -64,21 +65,37 @@ describe("EmailAccountTest", () => {
   }
 
   before(async () => {
+    console.log("\n🚀 Initializing Email Account Test Suite...");
+    
+    const bundlerMode = process.env.BUNDLER === 'unsafe' ? '⚠️  UNSAFE' : '🔒 SAFE';
+    const bundlerPort = process.env.BUNDLER === 'unsafe' ? '3002' : '3000';
+    
+    console.log("\n🔧 Environment Configuration:");
+    console.log(`  ├─ BUNDLER: ${bundlerMode} (port ${bundlerPort})`);
+    console.log(`  └─ STAKE_ACCOUNT: ${process.env.STAKE_ACCOUNT || 'false'}`);
+    
     context = await setupTests();
     [owner, recipient] = await ethers.getSigners();
-    console.log("owner", await owner.getAddress());
-    console.log("owner balance:", ethers.formatEther(await context.provider.getBalance(await owner.getAddress())));
+    
+    console.log("\n📋 Test Configuration:");
+    console.log("  ├─ Owner Address:", await owner.getAddress());
+    console.log("  ├─ Owner Balance:", ethers.formatEther(await context.provider.getBalance(await owner.getAddress())), "ETH");
+    console.log("  ├─ EntryPoint:", context.entryPointAddress);
+    console.log(`  └─ Bundler URL: http://localhost:${bundlerPort}/rpc (${bundlerMode})`);
 
     recipientAddress = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
     const verifierFactory = await ethers.getContractFactory(
       "EmailAccountDummyVerifier"
     );
     verifier = await verifierFactory.deploy();
+    console.log("\n🔧 Deploying Contracts:");
+    console.log("  ├─ Verifier deployed to:", await verifier.getAddress());
 
     const dkimRegistryFactory = await ethers.getContractFactory(
       "HMockDkimRegistry"
     );
     dkimRegistry = await dkimRegistryFactory.deploy();
+    console.log("  ├─ DKIM Registry deployed to:", await dkimRegistry.getAddress());
 
     domainPubKeyHash =
       BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey"))) %
@@ -95,16 +112,34 @@ describe("EmailAccountTest", () => {
       await dkimRegistry.getAddress()
     );
     await emailAccountFactory.waitForDeployment();
+    console.log("  └─ Email Account Factory deployed to:", await emailAccountFactory.getAddress());
   
     // deploy the email account using the factory
+    console.log("\n📬 Creating Email Account:");
     await emailAccountFactory.createEmailAccount(accountCommitment);
     emailAccount = await ethers.getContractAt("EmailAccount", await emailAccountFactory.computeAddress(accountCommitment));
+    console.log("  └─ Email Account created at:", await emailAccount.getAddress());
 
     // fund the account from owner's account
+    const fundingAmount = ethers.parseEther("1000");
+    console.log("\n💰 Funding Account:");
+    console.log("  └─ Sending", ethers.formatEther(fundingAmount), "ETH to Email Account");
     await owner.sendTransaction({
       to: await emailAccount.getAddress(),
-      value: ethers.parseEther("1000")
+      value: fundingAmount
     });
+
+    // Only add stake if STAKE_ACCOUNT environment variable is set to true
+    if (process.env.STAKE_ACCOUNT === 'true') {
+      console.log("\n🔒 Adding Stake:");
+      console.log("  └─ Staking 1 ETH to account");
+      await emailAccount.addStake(1, { value: ethers.parseEther("1") });
+    } else {
+      console.log("\nℹ️  Stake Status:");
+      console.log("  └─ Skipping account staking (STAKE_ACCOUNT not set)");
+    }
+    
+    console.log("\n✅ Setup Complete!\n");
   });
 
   it("should load the mock prover", async () => {
