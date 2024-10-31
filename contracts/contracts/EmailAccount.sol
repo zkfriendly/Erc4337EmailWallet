@@ -61,7 +61,7 @@ contract EmailAccount is BaseAccount {
     function _validateSignature(
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal override returns (uint256 validationData) {
+    ) internal view override returns (uint256 validationData) {
         (
             uint256[2] memory _pA,
             uint256[2][2] memory _pB,
@@ -83,24 +83,12 @@ contract EmailAccount is BaseAccount {
         );
         bool result = isUserOpHashValid &&
             isAccountCommitmentValid &&
-            isProofValid;
-
-        currentHash = _pubSignals[2]; // Store this for validation before executing the transaction
+            isProofValid &&
+            IDkimRegistry(dkimRegistry).isDKIMPublicKeyHashValid(_pubSignals[2]);
 
         return result ? 0 : 1;
     }
 
-    /// @notice Modifier to ensure the DKIM hash is valid before execution
-    modifier onlyValidDkimHash() {
-        // Fetch the latest state from the DKIM registry
-        if (
-            !IDkimRegistry(dkimRegistry).isDKIMPublicKeyHashValid(currentHash)
-        ) {
-            currentHash = 0;
-            revert DKIMHashInvalid();
-        }
-        _;
-    }
 
     /// @notice Executes a transaction
     /// @param dest The destination address
@@ -110,7 +98,7 @@ contract EmailAccount is BaseAccount {
         address dest,
         uint256 value,
         bytes calldata func
-    ) external onlyValidDkimHash {
+    ) external {
         _requireFromEntryPoint();
         (bool success, bytes memory result) = dest.call{value: value}(func);
 
@@ -119,6 +107,11 @@ contract EmailAccount is BaseAccount {
                 revert(add(result, 32), mload(result))
             }
         }
+    }
+
+
+    function addStake(uint32 _unstakeDelaySec) external payable {
+        entryPoint().addStake{value: msg.value}(_unstakeDelaySec);
     }
 
     /// @notice Receives Ether
