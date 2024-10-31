@@ -30,7 +30,25 @@ services:
       timeout: 30s
       retries: 5
       start_period: 30s
-  
+
+  bundler-unsafe:
+    build:
+      context: .
+      dockerfile: Dockerfile.bundler
+    ports:
+      - "${BUNDLER_UNSAFE_PORT}:${BUNDLER_PORT}"
+    command:
+      ["yarn", "run", "bundler", "--network", "http://node:${NODE_PORT}", "--unsafe", "--entryPoint", "0x0000000071727De22E5E9d8BAf0edAc6f37da032"]
+    depends_on:
+      - node
+      - bundler
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${BUNDLER_UNSAFE_PORT}/"]
+      interval: 1m30s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+
   contracts:
     build:
       context: ./contracts
