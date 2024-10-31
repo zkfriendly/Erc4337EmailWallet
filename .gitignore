@@ -2,3 +2,6 @@
 
 # Ignore deployed addresses file
 contracts/deployedAddresses.json
+
+.vscode
+.idea
