@@ -6,31 +6,50 @@ import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "./interfaces/IGroth16Verifier.sol";
 import "./interfaces/IDkimRegistry.sol";
 
-/// @title EmailAccount - it is a minimal proxy that gets cloned by the factory according to EIP-1167
-/// @notice A contract for managing email-based accounts with DKIM verification
-/// @dev Implements BaseAccount for account abstraction
+/// @title EmailAccount - A minimal proxy for email-based accounts with DKIM verification
+/// @notice This contract enables account abstraction using email-based authentication
+/// @dev Implements EIP-1167 minimal proxy pattern and EIP-4337 BaseAccount
 contract EmailAccount is BaseAccount {
-    address private _entryPoint;
-    address public dkimRegistry; // Address of the DKIM registry to query validity of DKIM public key hashes
-    uint256 public ownerEmailCommitment; // Hash of the owner's salted email
-    address public verifier; // The ZK verifier for email integrity and ownership
+    // --- Events ---
+    event AccountInitialized(
+        address indexed entryPoint,
+        address indexed verifier,
+        address indexed dkimRegistry,
+        uint256 commitment
+    );
+    event DKIMCacheUpdated(string domain, uint256 pubKeyHash, bool isValid);
+    event TransactionExecuted(address indexed dest, uint256 value, bytes data);
 
+    // --- State Variables ---
+    /// @notice The EntryPoint contract address
+    address private _entryPoint;
+
+    /// @notice Address of the DKIM registry for validating public key hashes
+    address public dkimRegistry;
+
+    /// @notice Hash of the owner's salted email address
+    uint256 public ownerEmailCommitment;
+
+    /// @notice The ZK verifier contract for email integrity and ownership proofs
+    address public verifier;
+
+    /// @notice Flag to prevent re-initialization
     bool public isInitialized;
 
+    /// @notice Cache of validated DKIM public key hashes per domain
     mapping(string => mapping(uint256 => bool)) public isDKIMPublicKeyHashValidCache;
 
-    /// @dev The current pubkey hash of a userOp that was validated by _validateSignature
-    /// but not yet executed. So we need to make sure the cache for this pubkey hash has been up to date when it was validated.
+    /// @notice Current pubkey hash being processed in a userOp
+    /// @dev Used to track validation state between signature check and execution
     uint256 public currentPubKeyHash;
 
-    // BN128 field prime - used for reducing userOpHash to field size
+    /// @notice BN128 field prime for modular arithmetic
     uint256 public constant p = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
-    /// @notice The current hash(domain, pubkeyhash) being validated
-    /// @dev This is set in _validateSignatureu
+    /// @notice Current hash of domain and pubkeyhash being validated
     uint256 public currentHash;
 
-    /// @notice Constructs the EmailAccount contract
+    /// @notice Initializes the account with core parameters
     /// @param anEntryPoint The EntryPoint contract address
     /// @param _verifier The Groth16 verifier contract
     /// @param _dkimRegistry The DKIM registry contract address
@@ -48,10 +67,11 @@ contract EmailAccount is BaseAccount {
         verifier = _verifier;
         dkimRegistry = _dkimRegistry;
         ownerEmailCommitment = _accountCommitment % p;
+
+        emit AccountInitialized(anEntryPoint, _verifier, _dkimRegistry, _accountCommitment % p);
     }
 
-    /// @notice Returns the EntryPoint contract
-    /// @return The EntryPoint contract instance
+    /// @inheritdoc BaseAccount
     function entryPoint() public view override returns (IEntryPoint) {
         return IEntryPoint(_entryPoint);
     }
@@ -69,11 +89,10 @@ contract EmailAccount is BaseAccount {
 
         currentPubKeyHash = _pubSignals[2];
 
-        // Optimizing this to return early if any of the checks fail causes gas estimation to be off by a lot in the bundler
+        // Validate proof components
         bool isUserOpHashValid = _pubSignals[0] == uint256(userOpHash) % p;
         bool isAccountCommitmentValid = _pubSignals[1] == ownerEmailCommitment;
         bool isProofValid = IGroth16Verifier(verifier).verifyProof(_pA, _pB, _pC, _pubSignals);
-        // we will make sure this is up to date on execution
         bool isDKIMPublicKeyHashValid = isDKIMPublicKeyHashValidCache["example.com"][currentPubKeyHash];
 
         bool result = isUserOpHashValid && isAccountCommitmentValid && isProofValid && isDKIMPublicKeyHashValid;
@@ -81,7 +100,7 @@ contract EmailAccount is BaseAccount {
         return result ? 0 : 1;
     }
 
-    /// @notice Executes a transaction
+    /// @notice Executes a transaction after validation
     /// @param dest The destination address
     /// @param value The amount of ETH to send
     /// @param func The function data to execute
@@ -93,29 +112,32 @@ contract EmailAccount is BaseAccount {
                 revert(add(result, 32), mload(result))
             }
         }
+        emit TransactionExecuted(dest, value, func);
     }
 
+    /// @notice Adds stake to the EntryPoint contract
+    /// @param _unstakeDelaySec Delay before stake can be withdrawn
     function addStake(uint32 _unstakeDelaySec) external payable {
         entryPoint().addStake{value: msg.value}(_unstakeDelaySec);
     }
 
+    /// @notice Updates the cache for a DKIM public key hash
+    /// @param domain The email domain
+    /// @param pubKeyHash The public key hash to validate
     function updateDKIMPublicKeyHashCache(string memory domain, uint256 pubKeyHash) external {
-        isDKIMPublicKeyHashValidCache[domain][pubKeyHash] = IDkimRegistry(dkimRegistry).isDKIMPublicKeyHashValid(
-            domain,
-            pubKeyHash
-        );
+        bool isValid = IDkimRegistry(dkimRegistry).isDKIMPublicKeyHashValid(domain, pubKeyHash);
+        isDKIMPublicKeyHashValidCache[domain][pubKeyHash] = isValid;
+        emit DKIMCacheUpdated(domain, pubKeyHash, isValid);
     }
 
-    /// @notice Receives Ether
+    /// @notice Receives ETH transfers
     receive() external payable {}
 
-    /// @notice Fallback function
+    /// @notice Fallback function for unknown calls
     fallback() external payable {}
 
-    /// @notice Modifier that checks if the DKIM public key hash is still valid
-    /// @dev Updates the cache and only proceeds if the key is valid
-    /// @dev We assume the previous value of the cache is true since this is an execution modifier
-    /// @dev If invalid, returns silently to allow cache update without execution
+    /// @notice Ensures DKIM public key hash is valid before execution
+    /// @dev Updates cache and validates current public key hash
     modifier onlyValidCache() {
         string memory domain = "example.com";
         bool isValid = IDkimRegistry(dkimRegistry).isDKIMPublicKeyHashValid(domain, currentPubKeyHash);
