@@ -39,7 +39,7 @@ describe("EmailAccountTest", () => {
   async function setupTests() {
     const [admin, owner] = await ethers.getSigners();
     const provider = new ethers.JsonRpcProvider("http://localhost:8545");
-    
+
     const bundlerProvider = new ethers.JsonRpcProvider(
       process.env.BUNDLER === "unsafe" ? "http://localhost:3002/rpc" : "http://localhost:3000/rpc"
     );
@@ -66,17 +66,17 @@ describe("EmailAccountTest", () => {
 
   before(async () => {
     console.log("\n🚀 Initializing Email Account Test Suite...");
-    
+
     const bundlerMode = process.env.BUNDLER === 'unsafe' ? '⚠️  UNSAFE' : '🔒 SAFE';
     const bundlerPort = process.env.BUNDLER === 'unsafe' ? '3002' : '3000';
-    
+
     console.log("\n🔧 Environment Configuration:");
     console.log(`  ├─ BUNDLER: ${bundlerMode} (port ${bundlerPort})`);
     console.log(`  └─ STAKE_ACCOUNT: ${process.env.STAKE_ACCOUNT || 'false'}`);
-    
+
     context = await setupTests();
     [owner, recipient] = await ethers.getSigners();
-    
+
     console.log("\n📋 Test Configuration:");
     console.log("  ├─ Owner Address:", await owner.getAddress());
     console.log("  ├─ Owner Balance:", ethers.formatEther(await context.provider.getBalance(await owner.getAddress())), "ETH");
@@ -113,7 +113,7 @@ describe("EmailAccountTest", () => {
     );
     await emailAccountFactory.waitForDeployment();
     console.log("  └─ Email Account Factory deployed to:", await emailAccountFactory.getAddress());
-  
+
     // deploy the email account using the factory
     console.log("\n📬 Creating Email Account:");
     await emailAccountFactory.createEmailAccount(accountCommitment);
@@ -139,22 +139,6 @@ describe("EmailAccountTest", () => {
       console.log("  └─ Skipping account staking (STAKE_ACCOUNT not set)");
     }
 
-    // add stake for dkim registry
-    console.log("\n🔒 Adding Stake to DKIM Registry:");
-    console.log("  └─ Staking 1 ETH to DKIM Registry");
-    
-    // send 1 ETH to dkim registry
-    await owner.sendTransaction({
-      to: await dkimRegistry.getAddress(),
-      value: ethers.parseEther("2")
-    });
-
-    // get and log the balance of the dkim registry
-    const dkimRegistryBalance = await context.provider.getBalance(await dkimRegistry.getAddress());
-    console.log("  └─ DKIM Registry Balance:", ethers.formatEther(dkimRegistryBalance), "ETH");
-
-    await dkimRegistry.addStake(context.entryPointAddress, 1, { value: ethers.parseEther("1") });
-    
     console.log("\n✅ Setup Complete!\n");
   });
 
@@ -183,6 +167,10 @@ describe("EmailAccountTest", () => {
     expect(proof).to.exist;
     expect(publicSignals).to.exist;
     expect(publicSignals).to.deep.equal(Object.values(input));
+  });
+
+  it("should update the DKIM public key hash cache", async () => {
+    await updateDKIMPublicKeyHashCache(domainPubKeyHash);
   });
 
   it("should execute a simple ETH transfer", async () => {
@@ -229,6 +217,7 @@ describe("EmailAccountTest", () => {
     domainPubKeyHash =
       BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_2"))) %
       BigInt(p); // will reset on each test case
+    await updateDKIMPublicKeyHashCache(domainPubKeyHash);
     await assertSendEth(transferAmount);
   });
 
@@ -236,17 +225,18 @@ describe("EmailAccountTest", () => {
     await assertSendEth(transferAmount);
   });
 
-  it("should not fail to transfer on first tx after new valid domain pubkey hash", async () => {
+  it("should fail to transfer on first tx after new valid domain pubkey hash", async () => {
     domainPubKeyHash =
       BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) %
       BigInt(p);
-    await assertSendEth(transferAmount);
+    await expect(assertSendEth(transferAmount)).to.be.rejected;
   });
 
-  it("should not fail to transfer on second tx after new valid domain pubkey hash", async () => {
+  it("should not fail to transfer on tx after new valid domain pubkey hash update", async () => {
     domainPubKeyHash =
       BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) %
       BigInt(p);
+    await updateDKIMPublicKeyHashCache(domainPubKeyHash);
     await assertSendEth(transferAmount);
   });
 
@@ -290,6 +280,13 @@ describe("EmailAccountTest", () => {
     return unsignedUserOperation;
   }
 
+  async function updateDKIMPublicKeyHashCache(domainPubKeyHash: bigint) {
+    await emailAccount.updateDKIMPublicKeyHashCache("example.com", domainPubKeyHash);
+    await emailAccount.waitForDeployment();
+    const cache = await emailAccount.isDKIMPublicKeyHashValidCache("example.com", domainPubKeyHash);
+    expect(cache).to.be.true;
+  }
+
   async function assertSendEth(amount: bigint) {
     const recipientBalanceBefore = await context.provider.getBalance(
       recipientAddress
@@ -300,7 +297,7 @@ describe("EmailAccountTest", () => {
       ["address", "uint256", "bytes"],
       [recipientAddress, amount, "0x"]
     ).slice(2);
-    
+
     const userOp = await prepareUserOp(callData);
     await sendUserOpAndWait(
       userOp,

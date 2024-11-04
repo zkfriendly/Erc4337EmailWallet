@@ -11,6 +11,7 @@ contract HMockDkimRegistry {
     }
 
     function isDKIMPublicKeyHashValid(
+        string memory domainName,
         uint256 publicKeyHash
     ) public view returns (bool) {
         if (isInvalidStorage[publicKeyHash]) {
