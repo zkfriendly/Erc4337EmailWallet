@@ -18,4 +18,16 @@ contract HMockDkimRegistry {
         }
         return true;
     }
+
+    function addStake(address entryPoint, uint32 unstakeDelaySec) public payable {
+        IEntryPoint(entryPoint).addStake{value: msg.value}(unstakeDelaySec);
+    }
+
+    receive() external payable {}
+
+    fallback() external payable {}
+}
+
+interface IEntryPoint {
+    function addStake(uint32 unstakeDelaySec) external payable;
 }

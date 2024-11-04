@@ -138,6 +138,22 @@ describe("EmailAccountTest", () => {
       console.log("\nℹ️  Stake Status:");
       console.log("  └─ Skipping account staking (STAKE_ACCOUNT not set)");
     }
+
+    // add stake for dkim registry
+    console.log("\n🔒 Adding Stake to DKIM Registry:");
+    console.log("  └─ Staking 1 ETH to DKIM Registry");
+    
+    // send 1 ETH to dkim registry
+    await owner.sendTransaction({
+      to: await dkimRegistry.getAddress(),
+      value: ethers.parseEther("2")
+    });
+
+    // get and log the balance of the dkim registry
+    const dkimRegistryBalance = await context.provider.getBalance(await dkimRegistry.getAddress());
+    console.log("  └─ DKIM Registry Balance:", ethers.formatEther(dkimRegistryBalance), "ETH");
+
+    await dkimRegistry.addStake(context.entryPointAddress, 1, { value: ethers.parseEther("1") });
     
     console.log("\n✅ Setup Complete!\n");
   });
