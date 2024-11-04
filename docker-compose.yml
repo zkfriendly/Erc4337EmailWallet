@@ -3,16 +3,7 @@ services:
     image: ethereum/client-go:v1.13.5
     ports:
       - "${NODE_PORT}:8545"
-    command: [
-      "--miner.gaslimit", "12000000",
-      "--http", "--http.api", "personal,eth,net,web3,debug",
-      "--http.vhosts", "*,localhost,host.docker.internal", "--http.addr", "0.0.0.0",
-      "--allow-insecure-unlock", "--rpc.allow-unprotected-txs",
-      "--dev",
-      "--verbosity", "2",
-      "--nodiscover", "--maxpeers", "0", "--mine",
-      "--networkid", "1337"
-    ]
+    command: [ "--miner.gaslimit", "12000000", "--http", "--http.api", "personal,eth,net,web3,debug", "--http.vhosts", "*,localhost,host.docker.internal", "--http.addr", "0.0.0.0", "--allow-insecure-unlock", "--rpc.allow-unprotected-txs", "--dev", "--verbosity", "2", "--nodiscover", "--maxpeers", "0", "--mine", "--networkid", "1337" ]
 
   bundler:
     build:
@@ -20,12 +11,11 @@ services:
       dockerfile: Dockerfile.bundler
     ports:
       - "${BUNDLER_PORT}:${BUNDLER_PORT}"
-    command:
-      ["yarn", "run", "bundler", "--network", "http://node:${NODE_PORT}"]
+    command: [ "yarn", "run", "bundler", "--network", "http://node:${NODE_PORT}" ]
     depends_on:
       - node
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${BUNDLER_PORT}/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${BUNDLER_PORT}/" ]
       interval: 1m30s
       timeout: 30s
       retries: 5
@@ -37,13 +27,14 @@ services:
       dockerfile: Dockerfile.bundler
     ports:
       - "${BUNDLER_UNSAFE_PORT}:${BUNDLER_PORT}"
-    command:
-      ["yarn", "run", "bundler", "--network", "http://node:${NODE_PORT}", "--unsafe", "--entryPoint", "0x0000000071727De22E5E9d8BAf0edAc6f37da032"]
+    command: [ "yarn", "run", "bundler", "--network", "http://node:${NODE_PORT}", "--unsafe", "--entryPoint", "0x0000000071727De22E5E9d8BAf0edAc6f37da032" ]
     depends_on:
-      - node
-      - bundler
+      bundler:
+        condition: service_healthy
+      node:
+        condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${BUNDLER_UNSAFE_PORT}/"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${BUNDLER_UNSAFE_PORT}/" ]
       interval: 1m30s
       timeout: 30s
       retries: 5
@@ -56,13 +47,13 @@ services:
     environment:
       - NODE_URL=http://node:${NODE_PORT}
       - BUNDLER_URL=http://bundler:${BUNDLER_PORT}/rpc
-    command: ["/bin/sh", "-c", "npx hardhat run scripts/deploy/deployEmailAccountFactory.ts --network dev"]
+    command: [ "/bin/sh", "-c", "npx hardhat run scripts/deploy/deployEmailAccountFactory.ts --network dev" ]
     depends_on:
       bundler:
         condition: service_healthy
     volumes:
-      - ./contracts/deployedAddresses:/usr/src/app/deployedAddresses  # Add this line to mount the volume
-  
+      - ./contracts/deployedAddresses:/usr/src/app/deployedAddresses # Add this line to mount the volume
+
   scanner:
     image: otterscan/otterscan:latest
     ports:
@@ -82,9 +73,9 @@ services:
       - JSON_LOGGER=${SMPT_JSON_LOGGER}
     ports:
       - "${SMTP_PORT}:${SMTP_INTERNAL_SERVER_PORT}"
-    command: ["relayer-smtp"]
+    command: [ "relayer-smtp" ]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${SMTP_INTERNAL_SERVER_PORT}/api/ping"]
+      test: [ "CMD", "curl", "-f", "http://localhost:${SMTP_INTERNAL_SERVER_PORT}/api/ping" ]
       interval: 1m30s
       timeout: 30s
       retries: 5
@@ -102,10 +93,10 @@ services:
       - IMAP_PORT=${IMAP_PORT}
       - AUTH_TYPE=${IMAP_AUTH_TYPE}
       - JSON_LOGGER=${IMAP_JSON_LOGGER}
-    command: ["relayer-imap"]
+    command: [ "relayer-imap" ]
     depends_on:
       - relayer
-  
+
   relayer:
     build:
       context: ./relayer
@@ -115,4 +106,4 @@ services:
     environment:
       - PORT=${RELAYER_PORT}
       - BUNDLER_URL=http://bundler:${BUNDLER_PORT}/rpc
-    command: ["yarn", "start"]
+    command: [ "yarn", "start" ]
