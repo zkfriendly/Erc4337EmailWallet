@@ -22,6 +22,10 @@
   "dependencies": {
     "@account-abstraction": "https://github.com/eth-infinitism/account-abstraction",
     "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
+    "@zk-email/contracts": "^6.1.5",
+    "@zk-email/ether-email-auth-contracts": "0.0.2-preview",
+    "solady": "^0.0.123",
     "@types/snarkjs": "^0.7.8",
     "dotenv": "^16.4.5",
     "snarkjs": "^0.7.4"

@@ -437,6 +437,11 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
+"@matterlabs/zksync-contracts@^0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@matterlabs/zksync-contracts/-/zksync-contracts-0.6.1.tgz#39f061959d5890fd0043a2f1ae710f764b172230"
+  integrity sha512-+hucLw4DhGmTmQlXOTEtpboYCaOm/X2VJcWmnW4abNcOgQXEHX+mTxQrxEfPjIZT0ZE6z5FTUrOK9+RgUZwBMQ==
+
 "@metamask/eth-sig-util@^4.0.0":
   version "4.0.1"
   resolved "https://registry.npmjs.org/@metamask/eth-sig-util/-/eth-sig-util-4.0.1.tgz"
@@ -728,6 +733,11 @@
     fs-extra "^7.0.1"
     node-fetch "^2.6.0"
     semver "^6.3.0"
+
+"@openzeppelin/contracts-upgradeable@^5.0.0":
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-5.1.0.tgz#4d37648b7402929c53e2ff6e45749ecff91eb2b6"
+  integrity sha512-AIElwP5Ck+cslNE+Hkemf5SxjJoF4wBvvjxc27Rp+9jaPs/CLIaUBMYe1FNzhdiN0cYuwGRmYaRHmmntuiju4Q==
 
 "@openzeppelin/contracts@^5.0.0", "@openzeppelin/contracts@^5.0.2":
   version "5.0.2"
@@ -1036,6 +1046,26 @@
   version "0.7.8"
   resolved "https://registry.npmjs.org/@types/snarkjs/-/snarkjs-0.7.8.tgz"
   integrity sha512-x37Jsv1vx6I6RMJdfvYEmDUOLYgzYMecwlk13gniDOcN20xLVe9hy9DlQxWeCPirqpDY/jwugQSqCi2RxehU3g==
+
+"@zk-email/contracts@^6.1.5":
+  version "6.3.1"
+  resolved "https://registry.yarnpkg.com/@zk-email/contracts/-/contracts-6.3.1.tgz#bb8c29181819974f766e0669c7bb7e012be32fff"
+  integrity sha512-SiSSaHvn6BrT0vFFPA48r7jdoZi+2ZmRfU4QEQamtMqBlzVbs3ZmgTzgR4SFWz2/1SP+IIzDs9pfkkqf+6Wqcw==
+  dependencies:
+    "@openzeppelin/contracts" "^5.0.0"
+    "@openzeppelin/contracts-upgradeable" "^5.0.0"
+    dotenv "^16.3.1"
+
+"@zk-email/ether-email-auth-contracts@0.0.2-preview":
+  version "0.0.2-preview"
+  resolved "https://registry.yarnpkg.com/@zk-email/ether-email-auth-contracts/-/ether-email-auth-contracts-0.0.2-preview.tgz#1b10b02ae0f28b2d110688c7057c182bab322a96"
+  integrity sha512-ZITqmhdcxuICd/4sU1z8a2w04p2LWIOMl0FOX4j04gBz17k0hYsGcbNQl41FIqLQRTBVc+AZ8DMuegFO6/T2jQ==
+  dependencies:
+    "@matterlabs/zksync-contracts" "^0.6.1"
+    "@openzeppelin/contracts" "^5.0.0"
+    "@openzeppelin/contracts-upgradeable" "^5.0.0"
+    "@zk-email/contracts" "^6.1.5"
+    solady "^0.0.123"
 
 abbrev@1, abbrev@1.0.x:
   version "1.0.9"
@@ -1782,7 +1812,7 @@ dir-glob@^3.0.1:
   dependencies:
     path-type "^4.0.0"
 
-dotenv@^16.4.5:
+dotenv@^16.3.1, dotenv@^16.4.5:
   version "16.4.5"
   resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-16.4.5.tgz#cdd3b3b604cb327e286b4762e13502f717cb099f"
   integrity sha512-ZmdL2rui+eB2YwhsWzjInR8LldtZHGDoQ1ugH85ppHKwpUHL7j7rN0Ti9NCnGiQbhaZ11FpR+7ao1dNsmduNUg==
@@ -3625,6 +3655,11 @@ snarkjs@^0.7.4:
     js-sha3 "^0.8.0"
     logplease "^1.2.15"
     r1csfile "0.0.48"
+
+solady@^0.0.123:
+  version "0.0.123"
+  resolved "https://registry.yarnpkg.com/solady/-/solady-0.0.123.tgz#7ef95767c1570e3efde7550da2a8b439b2f413d2"
+  integrity sha512-F/B8OMCplGsS4FrdPrnEG0xdg8HKede5PwC+Rum8soj/LWxfKckA0p+Uwnlbgey2iI82IHvmSOCNhsdbA+lUrw==
 
 solc@0.8.26:
   version "0.8.26"

@@ -5,6 +5,7 @@ pragma solidity ^0.8.23;
 import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "./interfaces/IGroth16Verifier.sol";
 import "./interfaces/IDkimRegistry.sol";
+import "@zk-email/ether-email-auth-contracts/src/EmailAuth.sol";
 
 /// @title EmailAccount - A minimal proxy for email-based accounts with DKIM verification
 /// @notice This contract enables account abstraction using email-based authentication
