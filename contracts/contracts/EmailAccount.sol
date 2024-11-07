@@ -61,13 +61,13 @@ contract EmailAccount is BaseAccount, IDkimRegistry, EmailAuth {
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
     ) internal override returns (uint256 validationData) {
-        bool isUserOpHashValid = true;
-        bool isAccountCommitmentValid = true;
-        bool isProofValid = true;
-        bool isDKIMPublicKeyHashValid = true;
+        // extract the proof from signature
+        EmailAuthMsg memory emailAuthMsg = abi.decode(userOp.signature, (EmailAuthMsg));
+        // reverts if the proof is invalid
+        authEmail(emailAuthMsg);
+        uint256 signedHash = abi.decode(emailAuthMsg.commandParams[0], (uint256));
 
-        bool result = isUserOpHashValid && isAccountCommitmentValid && isProofValid && isDKIMPublicKeyHashValid;
-        return result ? 0 : 1;
+        return userOpHash == bytes32(signedHash) ? 0 : 1;
     }
 
     /// @notice Executes validated transaction
