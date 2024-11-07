@@ -33,9 +33,16 @@ contract EmailAccountFactory {
     /// @return The address of the newly created EmailAccount
     function createEmailAccount(uint256 ownerEmailCommitment) external returns (address) {
         address clone = Clones.cloneDeterministic(emailAccountImplementation, bytes32(ownerEmailCommitment));
-        
+
         // TODO: check if we can(should) avoid passing args that can be stored in the factory and only pass the factory address to the EmailAccount
-        EmailAccount(payable(clone)).initialize(entryPoint, verifier, dkimRegistry, ownerEmailCommitment);
+        EmailAccount(payable(clone)).initialize(
+            entryPoint,
+            verifier,
+            dkimRegistry,
+            ownerEmailCommitment,
+            "example.com",
+            1
+        );
         emit EmailAccountCreated(clone, ownerEmailCommitment);
         return clone;
     }
@@ -44,6 +51,11 @@ contract EmailAccountFactory {
     /// @param ownerEmailCommitment The hash of the owner's salted email
     /// @return The address of the EmailAccount that would be created
     function computeAddress(uint256 ownerEmailCommitment) external view returns (address) {
-        return Clones.predictDeterministicAddress(emailAccountImplementation, bytes32(ownerEmailCommitment), address(this));
+        return
+            Clones.predictDeterministicAddress(
+                emailAccountImplementation,
+                bytes32(ownerEmailCommitment),
+                address(this)
+            );
     }
 }
