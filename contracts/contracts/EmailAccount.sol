@@ -9,77 +9,54 @@ import "./interfaces/IEmailAuth.sol";
 import "@zk-email/ether-email-auth-contracts/src/EmailAuth.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import {Verifier} from "@zk-email/ether-email-auth-contracts/src/utils/Verifier.sol";
+import {IDKIMRegistry} from "@zk-email/contracts/DKIMRegistry.sol";
 
-/// @title EmailAccount - A minimal proxy for email-based accounts with DKIM verification
-/// @notice This contract enables account abstraction using email-based authentication
+/// @title EmailAccount - Email-based account abstraction with DKIM verification
 /// @dev Implements EIP-1167 minimal proxy pattern and EIP-4337 BaseAccount
-contract EmailAccount is BaseAccount, EmailAuth {
-    // --- Events ---
-    event AccountInitialized(
-        address indexed entryPoint,
-        address indexed verifier,
-        address indexed dkimRegistry,
-        uint256 commitment
-    );
+contract EmailAccount is BaseAccount, IDkimRegistry, EmailAuth {
+    // Events
     event DKIMCacheUpdated(string domain, uint256 pubKeyHash, bool isValid);
     event TransactionExecuted(address indexed dest, uint256 value, bytes data);
 
-    // --- State Variables ---
-    /// @notice The EntryPoint contract address
+    // Constants
+    string private constant TEMPLATE_PREFIX = "EMAIL_ACCOUNT_0";
+    string private DOMAIN;
+
+    // State Variables
     address private _entryPoint;
-
-    /// @notice Address of the DKIM registry for validating public key hashes
     address public globalDKIMRegistry;
-
-    /// @notice Cache of validated DKIM public key hashes per domain
     mapping(string => mapping(uint256 => bool)) public isDKIMPublicKeyHashValidCache;
-
-    /// @notice Current pubkey hash being processed in a userOp
-    /// @dev Used to track validation state between signature check and execution
     uint256 public currentPubKeyHash;
 
-    /// @notice Current hash of domain and pubkeyhash being validated
-    uint256 public currentHash;
+    modifier onlyValidCache() {
+        bool isValid = IDkimRegistry(globalDKIMRegistry).isDKIMPublicKeyHashValid(DOMAIN, currentPubKeyHash);
+        isDKIMPublicKeyHashValidCache[DOMAIN][currentPubKeyHash] = isValid;
+        if (!isValid) {
+            return;
+        }
+        _;
+    }
 
-    /// @notice Initializes the account with core parameters
-    /// @param anEntryPoint The EntryPoint contract address
-    /// @param _verifier The Groth16 verifier contract
-    /// @param _dkimRegistry The DKIM registry contract address
-    /// @param _accountSalt The account salt used for deterministic address generation
+    /// @notice Initializes account with core parameters
     function initialize(
-        address anEntryPoint,
+        address __entryPoint,
         address _verifier,
         address _dkimRegistry,
         uint256 _accountSalt,
-        string memory _domain, // initial values to initialize the cache
-        uint256 _pubKeyHash // initial values to initialize the cache
+        string memory _domain,
+        uint256 _pubKeyHash
     ) public initializer {
-        // Input validation
-        require(anEntryPoint != address(0), "Invalid EntryPoint address");
-        require(_verifier != address(0), "Invalid verifier address");
-        require(_dkimRegistry != address(0), "Invalid DKIM registry address");
-
-        // Set core contract addresses
-        _entryPoint = anEntryPoint;
-        globalDKIMRegistry = _dkimRegistry;
-
-        // Initialize base EmailAuth contract
-        // We pass this contract as owner, salt and controller since it manages itself
-        initialize(address(this), bytes32(_accountSalt), address(this));
-        initDKIMRegistry(address(this)); // dkim registry is this contract itself. Which is the cache.
-        initVerifier(_verifier);
-
-        emit AccountInitialized(anEntryPoint, _verifier, _dkimRegistry, _accountSalt);
+        _validateInitParams(__entryPoint, _verifier, _dkimRegistry);
+        _setupCore(__entryPoint, _dkimRegistry, _domain);
+        _initializeBase(_accountSalt, _verifier);
+        updateDKIMPublicKeyHashCache(_domain, _pubKeyHash);
     }
-    /// @inheritdoc BaseAccount
+
     function entryPoint() public view override returns (IEntryPoint) {
         return IEntryPoint(_entryPoint);
     }
 
-    /// @notice Validates the signature of a user operation
-    /// @param userOp The user operation to validate
-    /// @param userOpHash The hash of the user operation
-    /// @return validationData 0 if valid, 1 if invalid
+    /// @notice Validates user operation signature
     function _validateSignature(
         PackedUserOperation calldata userOp,
         bytes32 userOpHash
@@ -90,16 +67,61 @@ contract EmailAccount is BaseAccount, EmailAuth {
         bool isDKIMPublicKeyHashValid = true;
 
         bool result = isUserOpHashValid && isAccountCommitmentValid && isProofValid && isDKIMPublicKeyHashValid;
-
         return result ? 0 : 1;
     }
 
-    /// @notice Executes a transaction after validation
-    /// @param dest The destination address
-    /// @param value The amount of ETH to send
-    /// @param func The function data to execute
+    /// @notice Executes validated transaction
     function execute(address dest, uint256 value, bytes calldata func) external onlyValidCache {
         _requireFromEntryPoint();
+        _executeTransaction(dest, value, func);
+    }
+
+    function addStake(uint32 _unstakeDelaySec) external payable {
+        entryPoint().addStake{value: msg.value}(_unstakeDelaySec);
+    }
+
+    /// @notice Updates DKIM public key hash cache
+    function updateDKIMPublicKeyHashCache(string memory domain, uint256 pubKeyHash) public {
+        bool isValid = IDkimRegistry(globalDKIMRegistry).isDKIMPublicKeyHashValid(domain, pubKeyHash);
+        isDKIMPublicKeyHashValidCache[domain][pubKeyHash] = isValid;
+        emit DKIMCacheUpdated(domain, pubKeyHash, isValid);
+    }
+
+    function isDKIMPublicKeyHashValid(string memory domainName, uint256 publicKeyHash) public view returns (bool) {
+        return isDKIMPublicKeyHashValidCache[domainName][publicKeyHash];
+    }
+
+    function computeTemplateId(uint256 templateIdx) public pure returns (uint256) {
+        return uint256(keccak256(abi.encode(TEMPLATE_PREFIX, templateIdx)));
+    }
+
+    /// @notice Initializes command templates
+    function initCommands() internal {
+        string[][] memory templates = _createTemplates();
+        _insertTemplates(templates);
+    }
+
+    // Internal functions
+    function _validateInitParams(address anEntryPoint, address _verifier, address _dkimRegistry) private pure {
+        require(anEntryPoint != address(0), "Invalid EntryPoint address");
+        require(_verifier != address(0), "Invalid verifier address");
+        require(_dkimRegistry != address(0), "Invalid DKIM registry address");
+    }
+
+    function _setupCore(address __entryPoint, address _dkimRegistry, string memory _domain) private {
+        _entryPoint = __entryPoint;
+        globalDKIMRegistry = _dkimRegistry;
+        DOMAIN = _domain;
+    }
+
+    function _initializeBase(uint256 _accountSalt, address _verifier) private {
+        initialize(address(this), bytes32(_accountSalt), address(this));
+        initDKIMRegistry(address(this));
+        initVerifier(_verifier);
+        initCommands();
+    }
+
+    function _executeTransaction(address dest, uint256 value, bytes calldata func) private {
         (bool success, bytes memory result) = dest.call{value: value}(func);
         if (!success) {
             assembly {
@@ -109,37 +131,20 @@ contract EmailAccount is BaseAccount, EmailAuth {
         emit TransactionExecuted(dest, value, func);
     }
 
-    /// @notice Adds stake to the EntryPoint contract
-    /// @param _unstakeDelaySec Delay before stake can be withdrawn
-    function addStake(uint32 _unstakeDelaySec) external payable {
-        entryPoint().addStake{value: msg.value}(_unstakeDelaySec);
+    function _createTemplates() private pure returns (string[][] memory) {
+        string[][] memory templates = new string[][](1);
+        templates[0] = new string[](2);
+        templates[0][0] = "SignHash";
+        templates[0][1] = "{uint}";
+        return templates;
     }
 
-    /// @notice Updates the cache for a DKIM public key hash
-    /// @param domain The email domain
-    /// @param pubKeyHash The public key hash to validate
-    function updateDKIMPublicKeyHashCache(string memory domain, uint256 pubKeyHash) external {
-        bool isValid = IDkimRegistry(globalDKIMRegistry).isDKIMPublicKeyHashValid(domain, pubKeyHash);
-        isDKIMPublicKeyHashValidCache[domain][pubKeyHash] = isValid;
-        emit DKIMCacheUpdated(domain, pubKeyHash, isValid);
-    }
-
-    /// @notice Receives ETH transfers
-    receive() external payable {}
-
-    /// @notice Fallback function for unknown calls
-    fallback() external payable {}
-
-    /// @notice Ensures DKIM public key hash is valid before execution
-    /// @dev Updates cache and validates current public key hash
-    modifier onlyValidCache() {
-        string memory domain = "example.com";
-        bool isValid = IDkimRegistry(globalDKIMRegistry).isDKIMPublicKeyHashValid(domain, currentPubKeyHash);
-        isDKIMPublicKeyHashValidCache[domain][currentPubKeyHash] = isValid;
-
-        if (!isValid) {
-            return;
+    function _insertTemplates(string[][] memory templates) private {
+        for (uint8 i = 0; i < templates.length; i++) {
+            insertCommandTemplate(computeTemplateId(i), templates[i]);
         }
-        _;
     }
+
+    receive() external payable {}
+    fallback() external payable {}
 }
