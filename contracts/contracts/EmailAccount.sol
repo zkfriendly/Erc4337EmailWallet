@@ -6,6 +6,7 @@ import "@account-abstraction/contracts/core/BaseAccount.sol";
 import "./interfaces/IGroth16Verifier.sol";
 import "./interfaces/IDkimRegistry.sol";
 import "@zk-email/ether-email-auth-contracts/src/EmailAuth.sol";
+import "@openzeppelin/contracts/proxy/Clones.sol";
 
 /// @title EmailAccount - A minimal proxy for email-based accounts with DKIM verification
 /// @notice This contract enables account abstraction using email-based authentication
@@ -36,6 +37,9 @@ contract EmailAccount is BaseAccount {
 
     /// @notice Flag to prevent re-initialization
     bool public isInitialized;
+
+    /// @notice The EmailAuth implementation contract
+    address public emailAuthImplementation;
 
     /// @notice Cache of validated DKIM public key hashes per domain
     mapping(string => mapping(uint256 => bool)) public isDKIMPublicKeyHashValidCache;

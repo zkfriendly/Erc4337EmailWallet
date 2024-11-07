@@ -1,5 +1,5 @@
-# Use the official Rust image as the base image
-FROM rust:1.73 AS builder
+# Build stage
+FROM rust:1.73-slim AS builder
 
 # Install necessary dependencies
 RUN apt-get update && apt-get install -y \
@@ -11,14 +11,24 @@ RUN apt-get update && apt-get install -y \
 # Set the working directory in the container
 WORKDIR /usr/src/relayer-imap
 
-# Clone the repository
-RUN git clone https://github.com/zkfriendly/relayer-imap.git .
+# Clone the repository and build the application
+RUN git clone https://github.com/zkfriendly/relayer-imap.git . && \
+    cargo build --release
 
-# Build the application
-RUN cargo build --release
+# Runtime stage
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the built binary from builder stage
+COPY --from=builder /usr/src/relayer-imap/target/release/relayer-imap /usr/local/bin/
 
 # Expose the port the app runs on
 EXPOSE 8081
 
-# update PATH to include the target/release directory
-ENV PATH="/usr/src/relayer-imap/target/release:${PATH}"
+# Set the binary in PATH
+ENV PATH="/usr/local/bin:${PATH}"
