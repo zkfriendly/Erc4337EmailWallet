@@ -145,6 +145,10 @@ contract EmailAccount is BaseAccount, IDkimRegistry, EmailAuth {
         }
     }
 
+    function uAccountSalt() public view returns (uint256) {
+        return uint256(accountSalt);
+    }
+
     receive() external payable {}
     fallback() external payable {}
 }

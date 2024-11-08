@@ -3,6 +3,7 @@ import { JsonRpcProvider, Signer } from "ethers";
 import {
   EmailAccount,
   EmailAccountDummyVerifier,
+  EmailAccountFactory,
   HMockDkimRegistry,
 } from "../typechain";
 import { eSign, mockProver } from "../scripts/utils/prover";
@@ -30,6 +31,7 @@ describe("EmailAccountTest", () => {
   let recipientAddress: string;
   let domainPubKeyHash: bigint;
   let accountCommitment: bigint;
+  let emailAccountFactory: EmailAccountFactory;
 
   const transferAmount = ethers.parseEther("1");
 
@@ -101,8 +103,20 @@ describe("EmailAccountTest", () => {
       ethers.keccak256(ethers.toUtf8Bytes("sample_account_commitment"))
     );
 
+    // const decimalUtilsFactory = await ethers.getContractFactory("DecimalUtils");
+    // const decimalUtils = await decimalUtilsFactory.deploy();
+    // console.log("  ├─ Decimal Utils deployed to:", await decimalUtils.getAddress());
+
+    // const commandUtilsFactory = await ethers.getContractFactory("CommandUtils", {
+    //   libraries: {
+    //     DecimalUtils: await decimalUtils.getAddress()
+    //   }
+    // });
+    // const commandUtils = await commandUtilsFactory.deploy();
+    // console.log("  ├─ Command Utils deployed to:", await commandUtils.getAddress());
+
     const factory = await ethers.getContractFactory("EmailAccountFactory");
-    const emailAccountFactory = await factory.deploy(
+    emailAccountFactory = await factory.deploy(
       context.entryPointAddress,
       await verifier.getAddress(),
       await dkimRegistry.getAddress()
@@ -165,8 +179,18 @@ describe("EmailAccountTest", () => {
     expect(publicSignals).to.deep.equal(Object.values(input));
   });
 
-  it("should update the DKIM public key hash cache", async () => {
-    await updateDKIMPublicKeyHashCache(domainPubKeyHash);
+  it("should be able to deploy AA wallet for a given salt", async () => {
+    await emailAccountFactory.createEmailAccount(123);
+    const address = await emailAccountFactory.computeAddress(123);
+    expect(address).to.exist;
+  });
+
+  it("should be able to read the account commitment from loaded deployed computed address", async () => {
+    const accountSalt = ethers.keccak256(ethers.toUtf8Bytes("sample_account_salt"));
+    await emailAccountFactory.createEmailAccount(accountSalt);
+    const address = await emailAccountFactory.computeAddress(accountSalt);
+    const account = await ethers.getContractAt("EmailAccount", address);
+    expect(await account.uAccountSalt()).to.equal(accountSalt);
   });
 
   it("should execute a simple ETH transfer", async () => {

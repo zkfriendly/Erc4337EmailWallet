@@ -24,33 +24,48 @@ contract EmailAccountFactory {
         verifier = _verifier;
         dkimRegistry = _dkimRegistry;
 
-        // Deploy the EmailAccount implementation contract
-        emailAccountImplementation = address(new EmailAccount());
+        // // Deploy the EmailAccount implementation contract
+        // emailAccountImplementation = address(new EmailAccount());
     }
 
     /// @notice Creates a new EmailAccount instance using EIP-1167 minimal proxy
     /// @param ownerEmailCommitment The hash of the owner's salted email
     /// @return The address of the newly created EmailAccount
     function createEmailAccount(uint256 ownerEmailCommitment) external returns (address) {
+        // Check that implementation is set
+        require(emailAccountImplementation != address(0), "Implementation not set");
+
+        // Create deterministic clone
         address clone = Clones.cloneDeterministic(emailAccountImplementation, bytes32(ownerEmailCommitment));
 
-        // TODO: check if we can(should) avoid passing args that can be stored in the factory and only pass the factory address to the EmailAccount
-        EmailAccount(payable(clone)).initialize(
-            entryPoint,
-            verifier,
-            dkimRegistry,
-            ownerEmailCommitment,
-            "example.com",
-            1
-        );
-        emit EmailAccountCreated(clone, ownerEmailCommitment);
-        return clone;
+        // Verify clone address matches expected
+        address expectedAddress = computeAddress(ownerEmailCommitment);
+        require(clone == expectedAddress, "Invalid clone address");
+
+        // Initialize the cloned contract
+        try
+            EmailAccount(payable(clone)).initialize(
+                entryPoint,
+                verifier,
+                dkimRegistry,
+                ownerEmailCommitment,
+                "example.com", // Domain should probably be parameterized
+                1 // Initial pubKeyHash should probably be parameterized
+            )
+        {
+            emit EmailAccountCreated(clone, ownerEmailCommitment);
+            return clone;
+        } catch Error(string memory reason) {
+            revert(string.concat("Initialize failed: ", reason));
+        } catch {
+            revert("Initialize failed with unknown error");
+        }
     }
 
     /// @notice Computes the address of a new EmailAccount instance using EIP-1167 minimal proxy
     /// @param ownerEmailCommitment The hash of the owner's salted email
     /// @return The address of the EmailAccount that would be created
-    function computeAddress(uint256 ownerEmailCommitment) external view returns (address) {
+    function computeAddress(uint256 ownerEmailCommitment) public view returns (address) {
         return
             Clones.predictDeterministicAddress(
                 emailAccountImplementation,
