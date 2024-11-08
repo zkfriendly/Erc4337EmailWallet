@@ -31,9 +31,6 @@ describe("EmailAccountTest", () => {
   let domainPubKeyHash: bigint;
   let accountCommitment: bigint;
 
-  const p = BigInt(
-    "21888242871839275222246405745257275088548364400416034343698204186575808495617"
-  );
   const transferAmount = ethers.parseEther("1");
 
   async function setupTests() {
@@ -97,13 +94,12 @@ describe("EmailAccountTest", () => {
     dkimRegistry = await dkimRegistryFactory.deploy();
     console.log("  ├─ DKIM Registry deployed to:", await dkimRegistry.getAddress());
 
-    domainPubKeyHash =
-      BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey"))) %
-      BigInt(p);
-    accountCommitment =
-      BigInt(
-        ethers.keccak256(ethers.toUtf8Bytes("sample_account_commitment"))
-      ) % BigInt(p);
+    domainPubKeyHash = BigInt(
+      ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey"))
+    );
+    accountCommitment = BigInt(
+      ethers.keccak256(ethers.toUtf8Bytes("sample_account_commitment"))
+    );
 
     const factory = await ethers.getContractFactory("EmailAccountFactory");
     const emailAccountFactory = await factory.deploy(
@@ -214,9 +210,9 @@ describe("EmailAccountTest", () => {
   });
 
   it("should send eth with a different valid domain pubkey hash", async () => {
-    domainPubKeyHash =
-      BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_2"))) %
-      BigInt(p); // will reset on each test case
+    domainPubKeyHash = BigInt(
+      ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_2"))
+    );
     await updateDKIMPublicKeyHashCache(domainPubKeyHash);
     await assertSendEth(transferAmount);
   });
@@ -226,16 +222,16 @@ describe("EmailAccountTest", () => {
   });
 
   it("should fail to transfer on first tx after new valid domain pubkey hash", async () => {
-    domainPubKeyHash =
-      BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) %
-      BigInt(p);
+    domainPubKeyHash = BigInt(
+      ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))
+    );
     await expect(assertSendEth(transferAmount)).to.be.rejected;
   });
 
   it("should not fail to transfer on tx after new valid domain pubkey hash update", async () => {
-    domainPubKeyHash =
-      BigInt(ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))) %
-      BigInt(p);
+    domainPubKeyHash = BigInt(
+      ethers.keccak256(ethers.toUtf8Bytes("sample_dkim_pubkey_3"))
+    );
     await updateDKIMPublicKeyHashCache(domainPubKeyHash);
     await assertSendEth(transferAmount);
   });
