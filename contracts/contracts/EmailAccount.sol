@@ -115,9 +115,11 @@ contract EmailAccount is BaseAccount, IDkimRegistry, EmailAuth {
     }
 
     function _initializeBase(uint256 _accountSalt, address _verifier) private {
-        initialize(address(this), bytes32(_accountSalt), address(this));
-        initDKIMRegistry(address(this));
-        initVerifier(_verifier);
+        __Ownable_init(address(this));
+        controller = address(this);
+        accountSalt = bytes32(_accountSalt);
+        dkim = IDKIMRegistry(address(this));
+        verifier = Verifier(_verifier);
         initCommands();
     }
 
@@ -141,12 +143,8 @@ contract EmailAccount is BaseAccount, IDkimRegistry, EmailAuth {
 
     function _insertTemplates(string[][] memory templates) private {
         for (uint8 i = 0; i < templates.length; i++) {
-            insertCommandTemplate(computeTemplateId(i), templates[i]);
+            commandTemplates[computeTemplateId(i)] = templates[i];
         }
-    }
-
-    function uAccountSalt() public view returns (uint256) {
-        return uint256(accountSalt);
     }
 
     receive() external payable {}

@@ -14,6 +14,7 @@ import sendUserOpAndWait, {
 } from "../scripts/utils/userOpUtils";
 import { expect } from "chai";
 
+
 describe("EmailAccountTest", () => {
   let context: {
     bundlerProvider: JsonRpcProvider;
@@ -103,19 +104,23 @@ describe("EmailAccountTest", () => {
       ethers.keccak256(ethers.toUtf8Bytes("sample_account_commitment"))
     );
 
-    // const decimalUtilsFactory = await ethers.getContractFactory("DecimalUtils");
-    // const decimalUtils = await decimalUtilsFactory.deploy();
-    // console.log("  ├─ Decimal Utils deployed to:", await decimalUtils.getAddress());
+    const decimalUtilsFactory = await ethers.getContractFactory("DecimalUtils");
+    const decimalUtils = await decimalUtilsFactory.deploy();
+    console.log("  ├─ Decimal Utils deployed to:", await decimalUtils.getAddress());
 
-    // const commandUtilsFactory = await ethers.getContractFactory("CommandUtils", {
-    //   libraries: {
-    //     DecimalUtils: await decimalUtils.getAddress()
-    //   }
-    // });
-    // const commandUtils = await commandUtilsFactory.deploy();
-    // console.log("  ├─ Command Utils deployed to:", await commandUtils.getAddress());
+    const commandUtilsFactory = await ethers.getContractFactory("CommandUtils", {
+      libraries: {
+        DecimalUtils: await decimalUtils.getAddress()
+      }
+    });
+    const commandUtils = await commandUtilsFactory.deploy();
+    console.log("  ├─ Command Utils deployed to:", await commandUtils.getAddress());
 
-    const factory = await ethers.getContractFactory("EmailAccountFactory");
+    const factory = await ethers.getContractFactory("EmailAccountFactory", {
+      libraries: {
+        CommandUtils: await commandUtils.getAddress()
+      }
+    });
     emailAccountFactory = await factory.deploy(
       context.entryPointAddress,
       await verifier.getAddress(),
@@ -190,7 +195,7 @@ describe("EmailAccountTest", () => {
     await emailAccountFactory.createEmailAccount(accountSalt);
     const address = await emailAccountFactory.computeAddress(accountSalt);
     const account = await ethers.getContractAt("EmailAccount", address);
-    expect(await account.uAccountSalt()).to.equal(accountSalt);
+    expect(await account.accountSalt()).to.equal(accountSalt);
   });
 
   it("should execute a simple ETH transfer", async () => {

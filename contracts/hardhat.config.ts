@@ -16,8 +16,11 @@ const { NODE_URL } = process.env;
 const config: HardhatUserConfig = {
   solidity: "0.8.27",
   networks: {
+    hardhat: {
+      allowUnlimitedContractSize: true
+    },
     dev: {
-      chainId: 1337.,
+      chainId: 1337,
       url: NODE_URL,
     },
   },
