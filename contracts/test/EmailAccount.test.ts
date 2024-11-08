@@ -198,6 +198,11 @@ describe("EmailAccountTest", () => {
     expect(await account.accountSalt()).to.equal(accountSalt);
   });
 
+  it("should get templateId for index 0", async () => {
+    const templateId = await emailAccount.computeTemplateId(0);
+    console.log("Template ID:", templateId);
+  });
+
   it("should execute a simple ETH transfer", async () => {
     await assertSendEth(transferAmount);
   });
